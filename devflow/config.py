@@ -22,7 +22,7 @@ class AICfg(BaseModel):
 DEFAULT_ALLOWED_TOOLS = ",".join([
     "Read", "Edit", "Write", "MultiEdit", "Glob", "Grep", "LS", "WebFetch", "PowerShell",
     *(f"Bash({c} *)" for c in (
-        "cd", "git", "python", "py", "pip", "pytest", "uv", "poetry",
+        "cd", "git", "gh", "python", "py", "pip", "pytest", "uv", "poetry",
         "node", "npm", "npx", "pnpm", "yarn", "tsc", "vite", "next", "jest", "vitest", "eslint", "prettier",
         "dotnet", "cargo", "go", "make", "docker",
         "ls", "dir", "cat", "head", "tail", "grep", "rg", "find", "wc", "echo", "mkdir", "cp", "mv", "touch", "diff",
