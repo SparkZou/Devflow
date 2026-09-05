@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>#{{ t.id }} {{ t.title }} · DevFlow AI</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --line:#e3e6ea; --ink:#1f2328; --mute:#6b7280; --accent:#2563eb; --bad:#b91c1c; }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 14px/1.6 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background:var(--bg); color:var(--ink); }
+  header { display:flex; align-items:center; gap:16px; padding:12px 24px; background:#fff; border-bottom:1px solid var(--line); }
+  header a { color:var(--accent); text-decoration:none; }
+  header h1 { font-size:17px; margin:0; }
+  .wrap { padding:16px 24px; max-width:1200px; margin:0 auto; display:grid; grid-template-columns: 1fr 380px; gap:16px; }
+  @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:14px; }
+  .card h3 { margin:0 0 8px; font-size:14px; color:var(--mute); text-transform:uppercase; letter-spacing:.04em; }
+  pre, .pre { white-space:pre-wrap; word-break:break-word; font:inherit; margin:0; }
+  .b { font-size:11px; padding:1px 7px; border-radius:999px; background:#eef2f7; color:#374151; margin-right:4px; }
+  .b.state { background:#ede9fe; color:#5b21b6; }
+  label { display:block; font-size:12px; color:var(--mute); margin-top:8px; }
+  input[type=text], select, textarea { width:100%; border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; background:#fff; }
+  textarea { min-height:120px; resize:vertical; }
+  button { border:1px solid var(--line); background:#fff; border-radius:6px; padding:6px 12px; font:inherit; cursor:pointer; margin-right:6px; margin-top:8px; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.danger { color:var(--bad); }
+  ul { margin:4px 0; padding-left:20px; }
+  .events li { font-size:12px; color:#374151; }
+  .events .at { color:var(--mute); margin-right:6px; }
+  .err { color:var(--bad); }
+  img.shot { max-width:100%; border:1px solid var(--line); border-radius:6px; }
+  .links a { margin-right:12px; color:var(--accent); text-decoration:none; }
+</style>
+</head>
+<body>
+<header>
+  <a href="/">← 面板</a>
+  <h1>#{{ t.id }} {{ t.title or t.raw_text[:40] }}</h1>
+  <span><span class="b">{{ t.priority }}</span><span class="b state">{{ t.label }}</span>{% if t.is_investigation %}<span class="b">🔍 检查类</span>{% endif %}{% if t.project %}<span class="b">📁 {{ disp(t.project) }}</span>{% if is_own(t.project) %}<span class="b">自有</span>{% endif %}{% endif %}{% if t.customer %}<span class="b">👤 {{ t.customer }}</span>{% endif %}{% if t.deadline %}<span class="b">⏰ {{ t.deadline }}</span>{% endif %}</span>
+  {% if auth_on %}<a href="/logout" style="margin-left:auto" title="退出登录">退出</a>{% endif %}
+</header>
+
+<div class="wrap">
+<div>
+  {% if t.error %}<div class="card"><h3>错误</h3><pre class="err">{{ t.error }}</pre></div>{% endif %}
+
+  {% if t.reply_draft or t.state in ('ready_to_deliver', 'delivered') %}
+  <div class="card">
+    <h3>📨 给客户的回复{% if t.state == 'delivered' %}（已发送 {{ t.delivered_at }}）{% endif %}</h3>
+    <form method="post" action="/task/{{ t.id }}/update" id="draft">
+      <textarea name="reply_draft" id="draft_text">{{ t.reply_draft }}</textarea>
+      <button type="submit">保存草稿</button>
+      <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('draft_text').value).then(()=>this.textContent='已复制 ✓')">复制</button>
+    </form>
+    {% if t.state == 'ready_to_deliver' %}
+    <form method="post" action="/task/{{ t.id }}/save_and_approve" onsubmit="document.getElementById('h_draft').value=document.getElementById('draft_text').value">
+      <input type="hidden" name="reply_draft" id="h_draft">
+      <button class="primary">{{ '通过钉钉发送给客户' if t.source == 'dingtalk' else '复制到剪贴板并标记已发送' }}</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if t.release_note %}<div class="card"><h3>{{ '🔍 检查结论（Claude 查代码/提交/线上后给你的报告）' if t.is_investigation else '更新说明（Release Note）' }}</h3><pre>{{ t.release_note }}</pre></div>{% endif %}
+
+  {% if t.test_report or t.screenshot_path %}
+  <div class="card">
+    <h3>AI 测试 {% if t.test_passed %}✅ 通过{% elif t.test_passed == False %}⚠️ 未通过{% else %}— 未测试{% endif %}</h3>
+    <pre>{{ t.test_report }}</pre>
+    {% if t.screenshot_path %}<p><img class="shot" src="/task/{{ t.id }}/screenshot" alt="截图"></p>{% endif %}
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h3>需求（AI 整理）</h3>
+    <form method="post" action="/task/{{ t.id }}/update">
+      <label>标题</label><input type="text" name="title" value="{{ t.title }}">
+      <label>描述</label><textarea name="description">{{ t.description }}</textarea>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        <div><label>仓库</label><select name="project"><option value="">未选</option>{% for p in cfg.projects %}<option value="{{ p.name }}" {{ 'selected' if p.name == t.project }}>{{ disp(p.name) }}{{ '（自有）' if p.kind == 'own' else '' }}</option>{% endfor %}</select></div>
+        <div><label>客户</label><input type="text" name="customer" value="{{ t.customer }}"></div>
+        <div><label>优先级</label><select name="priority">{% for p in ['P0','P1','P2','P3'] %}<option {{ 'selected' if p == t.priority }}>{{ p }}</option>{% endfor %}</select></div>
+        <div><label>截止</label><input type="text" name="deadline" value="{{ t.deadline }}" placeholder="YYYY-MM-DD"></div>
+      </div>
+      <button type="submit">保存修改</button>
+      {% if t.approve_label %}<button class="primary" formaction="/task/{{ t.id }}/save_and_approve">保存并{{ t.approve_label }}</button>{% endif %}
+    </form>
+    {% if t.acceptance %}<h3 style="margin-top:12px">验收标准</h3><ul>{% for a in t.acceptance %}<li>{{ a }}</li>{% endfor %}</ul>{% endif %}
+    {% if t.questions %}<h3 style="margin-top:12px">❓ 需要向客户确认</h3><ul>{% for q in t.questions %}<li>{{ q }}</li>{% endfor %}</ul>{% endif %}
+    <p style="color:var(--mute);font-size:12px">AI 判定依据（{{ '%.0f'|format(t.confidence*100) }}%）：{{ t.triage_reason }}</p>
+  </div>
+
+  <div class="card"><h3>客户原话（{{ t.source }}）</h3><pre>{{ t.raw_text }}</pre></div>
+
+  {% if t.attachments %}
+  <div class="card">
+    <h3>客户截图（{{ t.attachments|length }}）</h3>
+    {% for i in range(t.attachments|length) %}<a href="/task/{{ t.id }}/attachment/{{ i }}" target="_blank"><img class="shot" style="max-height:280px;margin:4px 6px 4px 0" src="/task/{{ t.id }}/attachment/{{ i }}" alt="截图 {{ i + 1 }}"></a>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if t.coder_summary %}<div class="card"><h3>Claude Code 改动总结（${{ '%.2f'|format(t.coder_cost) }}）</h3><pre>{{ t.coder_summary }}</pre></div>{% endif %}
+</div>
+
+<aside>
+  <div class="card">
+    <h3>操作</h3>
+    <div class="links">
+      {% if t.issue_url %}<a href="{{ t.issue_url }}" target="_blank">Issue #{{ t.issue_number }}</a>{% endif %}
+      {% if t.pr_url %}<a href="{{ t.pr_url }}" target="_blank">PR #{{ t.pr_number }}</a>{% endif %}
+      {% if t.deploy_run_url %}<a href="{{ t.deploy_run_url }}" target="_blank">部署记录</a>{% endif %}
+    </div>
+    {% if t.approve_label and t.project and t.state != 'ready_to_deliver' %}
+      <form method="post" action="/task/{{ t.id }}/approve"><button class="primary">{{ t.approve_label }}</button></form>
+    {% endif %}
+    {% if not t.is_done %}
+      <form method="post" action="/task/{{ t.id }}/retry">
+        <label>重试（可补充说明，会追加到需求描述里，例如"请改用 XX 方式"）</label>
+        <input type="text" name="note" placeholder="可选">
+        <button>重试当前步骤</button>
+      </form>
+      <form method="post" action="/task/{{ t.id }}/resolve" onsubmit="return confirm('标记 #{{ t.id }} 已由你解决？会关闭 DevFlow 开的 PR/分支/Issue')">
+        <label>我自己已经解决了（可写一句说明，会写进 Issue）</label>
+        <input type="text" name="note" placeholder="可选">
+        <button>标记已解决并清理 PR/Issue</button>
+      </form>
+      <form method="post" action="/task/{{ t.id }}/retriage" onsubmit="return confirm('让 AI 重新分析 #{{ t.id }}？会重置标题/项目/类型，保留原文和截图')"><button>重新分析（AI 判错了类型或项目时用）</button></form>
+      <form method="post" action="/task/{{ t.id }}/ignore" onsubmit="return confirm('忽略任务 #{{ t.id }}？')"><button class="danger">忽略此任务</button></form>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h3>时间线</h3>
+    <ul class="events">{% for e in t.events %}<li><span class="at">{{ e.at[5:16] }}</span>{{ e.msg }}</li>{% endfor %}</ul>
+  </div>
+  <div class="card" style="font-size:12px;color:var(--mute)">
+    创建 {{ t.created_at }}<br>更新 {{ t.updated_at }}<br>
+    {% if t.branch %}分支 {{ t.branch }}<br>{% endif %}
+    {% if t.merge_sha %}合并 {{ t.merge_sha[:7] }} @ {{ t.merged_at }}<br>{% endif %}
+    {% if t.meta.conversation_title %}钉钉会话：{{ t.meta.conversation_title }}{% endif %}
+  </div>
+</aside>
+</div>
+</body>
+</html>

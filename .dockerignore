@@ -1,0 +1,13 @@
+.git
+.venv
+data
+repos
+docs
+tests
+scripts
+deploy
+*.egg-info
+__pycache__
+.pytest_cache
+config.yaml
+.env

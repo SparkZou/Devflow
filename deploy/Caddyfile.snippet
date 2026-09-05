@@ -1,0 +1,12 @@
+# ============================================================
+# DevFlow AI —— AI Delivery Agent 面板（容器 devflow，网络 shared-proxy-network）
+# 应用自带登录（admin），Caddy 只做 HTTPS（自动签发/续期）+ 反向代理。
+# deploy/install.sh 会把这一段追加到 /opt/webApp/caddy/Caddyfile 并 reload。
+# ============================================================
+devflow.aicloud.co.nz {
+	encode zstd gzip
+	request_body {
+		max_size 50MB
+	}
+	reverse_proxy devflow:8765
+}

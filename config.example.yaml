@@ -1,0 +1,87 @@
+# ============================================================
+# DevFlow AI 配置。复制为 config.yaml 后修改（devflow init 会自动复制）
+# ============================================================
+
+ai:
+  backend: auto            # auto | anthropic | claude-code
+                           # auto: 有 ANTHROPIC_API_KEY 用 API，否则用本机 Claude Code 登录态
+  model: claude-opus-5     # anthropic 后端使用的模型
+  cli_model: ""            # claude-code 后端使用的模型（留空 = 用你 Claude Code 的默认模型）
+  fallbacks: true          # anthropic 后端：请求被安全策略拒答时，服务端自动换备用模型重跑
+  max_tokens: 16000
+
+coder:                     # 自动写代码：在项目仓库里以无人值守模式运行 Claude Code
+  claude_path: ""          # 留空自动查找（PATH，或 VS Code 扩展内置的 claude.exe）
+  model: ""                # 留空 = 默认模型
+  max_turns: 120           # 每次工具调用算一轮；大仓库要多留一些
+  resume_turns: 40         # 轮数用完还没做完时，自动续跑一次收尾
+  worktree_dir: ""         # 留空 = ~/.devflow/worktrees。路径里不能有空格，否则 Claude 的 cd 命令会被权限拦住
+  # 允许 Claude 无人值守时直接用的工具/命令。留空 = 用内置默认（读写文件 + cd/git/python/node/npm 等常用命令）。
+  # 想完全放开就设 skip_permissions: true（等于 --dangerously-skip-permissions，风险自负）
+  allowed_tools: ""
+  skip_permissions: false
+  timeout_minutes: 60
+
+gates:                     # 哪一步需要你点一下"确认"。false = 全自动
+  triage: false            # AI 判定是需求后 -> 直接创建任务和 GitHub Issue
+  code: false              # 建完 Issue -> 直接开分支让 Claude 写代码并提 PR
+  merge: true              # PR 通过 CI 后，合并前需要你确认（建议保留）
+  deliver: true            # 给客户发消息前需要你确认（建议保留）
+
+pipeline:
+  poll_seconds: 60         # 轮询 CI / 部署状态的间隔
+  ci_timeout_minutes: 45
+  deploy_timeout_minutes: 30
+  ci_fix_attempts: 1       # CI 失败后自动让 Claude 修几次
+
+dingtalk:
+  enabled: false
+  client_id: ""            # 钉钉开放平台 -> 应用 -> 凭证 AppKey（Client ID）
+  client_secret: ""        # AppSecret（Client Secret）
+  robot_code: ""           # 机器人 RobotCode（企业内部应用一般 = AppKey）
+  notify_webhook: ""       # 可选：一个"自定义机器人"的 webhook，用来给你自己发提醒/日报
+  notify_secret: ""        # 自定义机器人的加签 secret（可选）
+
+wecom:
+  notify_webhook: ""       # 可选：企业微信群机器人 webhook，用来给你自己发提醒/日报
+
+clipboard:
+  enabled: true            # 监听剪贴板：在微信里复制客户消息 -> 自动进入收件箱交给 AI 判定
+  min_chars: 12            # 少于这个字数的剪贴板内容忽略
+  trigger_prefix: ""       # 留空 = 复制的任何长文本都送 AI 判定；填 "#需求" 则只处理以它开头的
+  # 只接受在这些程序里复制的文字/图片（按复制时的前台窗口判断）。在 VS Code、浏览器里复制的不收。空列表 = 全收
+  apps: ["WeChat.exe", "Weixin.exe", "WeChatAppEx.exe", "WXWork.exe", "DingTalk.exe"]
+
+auth:                      # 面板登录（浏览器打开面板要先登录；CLI / API 用同一组账号走 HTTP Basic）
+  enabled: true
+  username: admin
+  password: admin2026      # 部署到公网务必改掉；也可用环境变量 DEVFLOW_PASSWORD 覆盖
+  secret: ""               # 会话签名密钥，留空 = 首次启动自动生成到 data/.session_secret
+  session_days: 7          # 登录状态保持天数
+
+dashboard:
+  host: 127.0.0.1
+  port: 8765
+  open_browser: true
+
+digest:
+  times: ["09:00", "18:00"]   # 每天这些时间提醒你：还有哪些没做 / 哪些等你确认
+  toast: true                 # Windows 桌面通知
+
+# 你的项目列表。AI 会根据关键词/客户名把需求归到项目；project 为空的任务会在面板里等你选。
+projects:
+  - name: demo-app
+    group: ""                                        # 一个产品多个仓库（前端/后端）时填同一个产品名；面板合并成一项，AI 决定改哪个仓库
+    kind: customer                                   # customer = 客户项目 | own = 自己的项目（面板分组 + "自有"标记）
+    description: ""                                  # 给 AI 看的一句话：这个仓库负责什么（前端/后端、技术栈）
+    repo_path: "C:/Development/Projects/demo-app"   # 本地仓库路径（必须是 git clone 下来的）
+    github_repo: "SparkZou/demo-app"                # GitHub owner/repo
+    default_branch: main
+    deploy_url: "https://demo.example.com"          # 部署后的访问地址（用于健康检查 + AI 截图验证）
+    deploy_workflow: "deploy.yml"                    # 部署用的 GitHub Actions 工作流文件名；留空 = 合并后等 deploy_wait_seconds 再检查
+    deploy_wait_seconds: 120
+    health_path: "/"
+    customers: ["张总", "李经理"]                    # 这个项目的客户/联系人，用来自动归类
+    keywords: ["订单", "后台", "demo"]              # 需求里出现这些词 -> 归到这个项目
+    test_hints: "首页应显示订单列表；无需登录"        # 给 AI 测试的提示（测试账号、入口页面等）
+    labels: ["devflow"]                              # 自动创建的 Issue 打的标签（不存在会自动忽略）

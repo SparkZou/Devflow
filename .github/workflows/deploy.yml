@@ -1,0 +1,29 @@
+name: Deploy
+
+# main 有新提交 → CI 通过后 SSH 到服务器执行 deploy/deploy.sh（拉代码、重建容器）
+# 仓库里需要配置：
+#   Variables: DEPLOY_HOST（服务器 IP/域名）、DEPLOY_USER（默认 ubuntu）
+#   Secrets:   DEPLOY_SSH_KEY（能登录服务器的私钥）
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: ${{ vars.DEPLOY_HOST != '' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
+    runs-on: ubuntu-latest
+    concurrency: deploy-production
+    steps:
+      - name: SSH deploy
+        env:
+          HOST: ${{ vars.DEPLOY_HOST }}
+          USER: ${{ vars.DEPLOY_USER || 'ubuntu' }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "$USER@$HOST" "bash /opt/webApp/devflow/deploy/deploy.sh"

@@ -1,0 +1,31 @@
+# ============================================================
+# DevFlow AI —— 部署路径 /opt/webApp/devflow
+# 对外由 /opt/webApp/caddy 的共享 Caddy 反向代理 + 自动 HTTPS（见 deploy/Caddyfile.snippet）
+# 安装/更新：deploy/install.sh、deploy/deploy.sh
+# ============================================================
+services:
+  devflow:
+    build: .
+    image: devflow-ai:latest
+    container_name: devflow
+    restart: unless-stopped
+    env_file: .env                          # ANTHROPIC_API_KEY / DEVFLOW_PASSWORD 等；改完 docker compose up -d
+    environment:
+      DEVFLOW_CONFIG: /app/conf/config.yaml
+    volumes:
+      - ./conf:/app/conf                    # config.yaml：改完刷新面板即生效（挂目录而不是单个文件，编辑器换 inode 也没事）
+      - ./data:/app/data                    # SQLite / 附件 / 截图 / 日志 / 会话密钥
+      - ./repos:/opt/repos                  # 客户项目的 git clone 放这里；config.yaml 的 repo_path 写 /opt/repos/<name>
+      - devflow-home:/home/devflow          # gh / Claude Code 登录态 + worktrees，重建镜像不丢
+    ports:
+      - "127.0.0.1:8765:8765"               # 只给本机健康检查/调试；公网流量走 Caddy
+    networks:
+      - default
+      - shared-proxy-network
+
+networks:
+  shared-proxy-network:
+    external: true
+
+volumes:
+  devflow-home:

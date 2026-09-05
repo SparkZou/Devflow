@@ -1,0 +1,42 @@
+# ============================================================
+# 服务器上的 DevFlow AI 配置 —— deploy/install.sh 首次安装时复制为 /opt/webApp/devflow/conf/config.yaml
+# 容器里改动即生效（刷新面板）。没写的项都用默认值（见 config.example.yaml）
+# ============================================================
+
+ai:
+  backend: auto            # .env 里有 ANTHROPIC_API_KEY 走 API，否则用容器里登录过的 Claude Code
+
+gates:
+  merge: true
+  deliver: true
+
+dingtalk:
+  enabled: false           # 要接钉钉机器人：填 client_id/client_secret 后改为 true
+
+clipboard:
+  enabled: false           # 服务器上没有微信，关掉剪贴板监听；需求通过面板粘贴或钉钉机器人进来
+
+dashboard:
+  host: 0.0.0.0            # 容器内监听；对外只由 Caddy 反代（宿主机仅 127.0.0.1:8765）
+  port: 8765
+  open_browser: false
+
+digest:
+  toast: false             # 没有桌面通知；提醒走 dingtalk.notify_webhook / wecom.notify_webhook
+
+auth:
+  enabled: true
+  username: admin
+  password: admin2026      # 上线后建议改掉（或在 .env 里设 DEVFLOW_PASSWORD 覆盖）
+  session_days: 7
+
+data_dir: /app/data        # 宿主机 /opt/webApp/devflow/data
+
+# 客户项目：先在宿主机 git clone 到 /opt/webApp/devflow/repos/<name>，容器里的路径是 /opt/repos/<name>
+projects: []
+#  - name: demo-app
+#    repo_path: "/opt/repos/demo-app"
+#    github_repo: "SparkZou/demo-app"
+#    deploy_url: "https://demo.example.com"
+#    customers: ["张总"]
+#    keywords: ["订单"]

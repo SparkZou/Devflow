@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DevFlow AI</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --line:#e3e6ea; --ink:#1f2328; --mute:#6b7280; --accent:#2563eb; --warn:#b45309; --ok:#15803d; --bad:#b91c1c; }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 14px/1.5 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background:var(--bg); color:var(--ink); }
+  header { display:flex; align-items:center; gap:16px; padding:12px 24px; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:2; }
+  header h1 { font-size:18px; margin:0; }
+  header .mute { color:var(--mute); font-size:12px; }
+  header .nav { margin-left:auto; display:flex; gap:14px; }
+  header a { color:var(--accent); text-decoration:none; }
+  .wrap { padding:16px 24px; max-width:1500px; margin:0 auto; }
+  .inbox { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:18px; }
+  .inbox textarea { width:100%; min-height:88px; border:1px solid var(--line); border-radius:8px; padding:10px; font:inherit; resize:vertical; }
+  .inbox .row { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; align-items:center; }
+  .inbox .row .hint { color:var(--mute); font-size:12px; margin-left:auto; }
+  select, input[type=text] { border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; background:#fff; }
+  button { border:1px solid var(--line); background:#fff; border-radius:6px; padding:6px 12px; font:inherit; cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.danger { color:var(--bad); }
+  .cols { display:grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap:16px; }
+  .col h2 { font-size:15px; margin:0 0 10px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px; }
+  .card.action { border-left:4px solid var(--warn); }
+  .card .title { font-weight:600; text-decoration:none; color:var(--ink); }
+  .card .title:hover { color:var(--accent); }
+  .badges { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
+  .b { font-size:11px; padding:1px 7px; border-radius:999px; background:#eef2f7; color:#374151; }
+  .b.P0 { background:#fee2e2; color:#991b1b; } .b.P1 { background:#ffedd5; color:#9a3412; } .b.P2 { background:#e0f2fe; color:#075985; } .b.P3 { background:#ecfccb; color:#3f6212; }
+  .b.state { background:#ede9fe; color:#5b21b6; }
+  .b.overdue { background:#fee2e2; color:#991b1b; }
+  .b.own { background:#f3f4f6; color:#6b7280; border:1px dashed #d1d5db; }
+  .b.inv { background:#fef3c7; color:#92400e; }
+  .filebar { display:flex; gap:10px; align-items:center; margin-top:6px; font-size:12px; color:var(--mute); flex-wrap:wrap; }
+  .filebar img { height:44px; border:1px solid var(--line); border-radius:4px; }
+  .filebar input[type=file] { display:none; }
+  .filebar label { color:var(--accent); cursor:pointer; }
+  .links a { margin-right:10px; color:var(--accent); font-size:12px; text-decoration:none; }
+  .actions { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .actions form { display:inline; }
+  .last { color:var(--mute); font-size:12px; margin-top:4px; white-space:pre-wrap; }
+  .empty { color:var(--mute); font-size:13px; padding:12px; }
+  .err { color:var(--bad); font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🚀 DevFlow AI</h1>
+  <span class="mute">AI 后端：{{ ai_backend }} · 门禁：合并{{ '需确认' if cfg.gates.merge else '自动' }} / 发客户{{ '需确认' if cfg.gates.deliver else '自动' }}
+    · 剪贴板监听：{{ '开' if cfg.clipboard.enabled else '关' }} · 钉钉机器人：{{ '开' if cfg.dingtalk.enabled else '关' }}</span>
+  <span class="nav"><a href="/">↻ 刷新</a>{% if auth_on %}<a href="/logout" title="退出登录">退出</a>{% endif %}</span>
+</header>
+<div class="wrap">
+
+<section class="inbox">
+  <form method="post" action="/inbox" enctype="multipart/form-data" id="inbox">
+    <textarea name="text" id="text" placeholder="在微信 / 钉钉里复制聊天记录或截图，到这个页面 Ctrl+V 就行（文字和图片都可以，多张也行），然后点「交给 AI」。（剪贴板监听开着时，在微信里 Ctrl+C 后不用粘贴也会自动收进来）"></textarea>
+    <div class="filebar">
+      <span id="preview">📎 截图：在微信里复制图片后，在本页任意位置 Ctrl+V</span>
+      <label for="files">或选择图片文件…</label>
+      <input type="file" name="files" id="files" accept="image/*" multiple title="选择截图文件">
+    </div>
+    <div class="row">
+      <select name="project">
+        <option value="">项目：让 AI 判断</option>
+        <optgroup label="客户项目">
+          {% for c in choices if c.kind != 'own' %}<option value="{{ c.value }}">{{ c.label }}</option>{% endfor %}
+        </optgroup>
+        <optgroup label="自己的项目">
+          {% for c in choices if c.kind == 'own' %}<option value="{{ c.value }}">{{ c.label }}</option>{% endfor %}
+        </optgroup>
+      </select>
+      <input type="text" name="customer" placeholder="客户（可选）">
+      <select name="source">
+        <option value="wechat">来源：微信</option>
+        <option value="dingtalk">来源：钉钉</option>
+        <option value="manual">来源：其他</option>
+      </select>
+      <button class="primary" type="submit">交给 AI</button>
+      <span class="hint">面板每 20 秒自动刷新</span>
+    </div>
+  </form>
+</section>
+
+{% macro card(t, is_action=False) -%}
+<div class="card {{ 'action' if is_action else '' }}">
+  <a class="title" href="/task/{{ t.id }}">#{{ t.id }} {{ t.title or t.raw_text[:40] }}</a>
+  <div class="badges">
+    <span class="b {{ t.priority }}">{{ t.priority }}</span>
+    <span class="b state">{{ t.label }}</span>
+    {% if t.is_investigation %}<span class="b inv">🔍 检查</span>{% endif %}
+    {% if t.project %}<span class="b">📁 {{ disp(t.project) }}</span>{% if is_own(t.project) %}<span class="b own">自有</span>{% endif %}{% elif t.meta.group %}<span class="b overdue">{{ t.meta.group }}：待选仓库</span>{% else %}<span class="b overdue">未选项目</span>{% endif %}
+    {% if t.customer %}<span class="b">👤 {{ t.customer }}</span>{% endif %}
+    {% if t.deadline %}<span class="b {{ 'overdue' if t.overdue else '' }}">⏰ {{ t.deadline }}</span>{% endif %}
+    <span class="b">{{ t.source }}</span>
+    {% if t.attachments %}<span class="b">🖼 {{ t.attachments|length }}</span>{% endif %}
+    {% if t.questions %}<span class="b overdue">❓ {{ t.questions|length }} 个待确认</span>{% endif %}
+    {% if t.meta.sibling_of %}<span class="b">🔗 配套 #{{ t.meta.sibling_of }}</span>{% endif %}
+  </div>
+  <div class="links">
+    {% if t.issue_url %}<a href="{{ t.issue_url }}" target="_blank">Issue #{{ t.issue_number }}</a>{% endif %}
+    {% if t.pr_url %}<a href="{{ t.pr_url }}" target="_blank">PR #{{ t.pr_number }}</a>{% endif %}
+    {% if t.deploy_run_url %}<a href="{{ t.deploy_run_url }}" target="_blank">部署</a>{% endif %}
+  </div>
+  {% if t.events %}<div class="last">{{ t.events[-1].at[5:16] }} · {{ t.events[-1].msg[:160] }}</div>{% endif %}
+  {% if t.error %}<div class="err">{{ t.error[:200] }}</div>{% endif %}
+  <div class="actions">
+    {% if t.approve_label and t.project %}
+      <form method="post" action="/task/{{ t.id }}/approve"><input type="hidden" name="back" value="/"><button class="primary">{{ t.approve_label }}</button></form>
+    {% elif t.state == 'todo' and not t.project %}
+      <form method="post" action="/task/{{ t.id }}/save_and_approve"><input type="hidden" name="back" value="/">
+        <select name="project"><option value="">选择仓库…</option>{% for p in cfg.projects if not t.meta.group or p.group == t.meta.group %}<option value="{{ p.name }}">{{ disp(p.name) }}{{ '（自有）' if p.kind == 'own' else '' }}</option>{% endfor %}</select>
+        <button class="primary">创建 Issue</button></form>
+    {% endif %}
+    {% if t.state in ('failed', 'ci_failed', 'test_failed') %}
+      <form method="post" action="/task/{{ t.id }}/retry"><input type="hidden" name="back" value="/"><button>重试</button></form>
+    {% endif %}
+    {% if t.state in ('todo', 'issue', 'not_task', 'failed', 'investigated') %}
+      <form method="post" action="/task/{{ t.id }}/retriage"><input type="hidden" name="back" value="/"><button title="让 AI 重新判断类型/项目">重新分析</button></form>
+    {% endif %}
+    {% if not t.is_done %}
+      <form method="post" action="/task/{{ t.id }}/resolve" onsubmit="return confirm('标记 #{{ t.id }} 已由你解决？会关闭 DevFlow 开的 PR/分支/Issue')"><input type="hidden" name="back" value="/"><button title="我自己已经解决了">已解决</button></form>
+      <form method="post" action="/task/{{ t.id }}/ignore" onsubmit="return confirm('忽略任务 #{{ t.id }}？')"><input type="hidden" name="back" value="/"><button class="danger">忽略</button></form>
+    {% endif %}
+  </div>
+</div>
+{%- endmacro %}
+
+<main class="cols">
+  <section class="col">
+    <h2>⚠️ 需要你处理（{{ action|length }}）</h2>
+    {% for t in action %}{{ card(t, True) }}{% else %}<div class="empty">没有等你的事 🎉</div>{% endfor %}
+  </section>
+  <section class="col">
+    <h2>🔄 自动进行中（{{ active|length }}）</h2>
+    {% for t in active %}{{ card(t) }}{% else %}<div class="empty">空</div>{% endfor %}
+  </section>
+  <section class="col">
+    <h2>✅ 最近完成 / 非需求</h2>
+    {% for t in done %}{{ card(t) }}{% else %}<div class="empty">空</div>{% endfor %}
+  </section>
+</main>
+</div>
+<script>
+  // 在页面任意位置 Ctrl+V：图片进附件，文字进输入框
+  const filesEl = document.getElementById('files'), preview = document.getElementById('preview'), textEl = document.getElementById('text');
+  const bucket = new DataTransfer();
+  function renderPreview() {
+    preview.innerHTML = '';
+    for (const f of bucket.files) { const img = document.createElement('img'); img.src = URL.createObjectURL(f); preview.appendChild(img); }
+    preview.insertAdjacentText('beforeend', bucket.files.length ? ` 已附 ${bucket.files.length} 张截图，点「交给 AI」提交` : '📎 截图：在微信里复制图片后，在本页任意位置 Ctrl+V');
+  }
+  document.addEventListener('paste', e => {
+    const items = [...(e.clipboardData?.items || [])].filter(i => i.type.startsWith('image/'));
+    if (items.length) {
+      e.preventDefault();
+      for (const it of items) { const f = it.getAsFile(); if (f) bucket.items.add(new File([f], `paste-${Date.now()}-${bucket.files.length}.png`, { type: f.type })); }
+      filesEl.files = bucket.files; renderPreview();
+      return;
+    }
+    const tag = document.activeElement?.tagName;
+    if (tag !== 'TEXTAREA' && tag !== 'INPUT') {  // 没点进输入框也能直接粘文字
+      const t = e.clipboardData?.getData('text');
+      if (t) { e.preventDefault(); textEl.value = (textEl.value ? textEl.value + '\n' : '') + t; textEl.focus(); }
+    }
+  });
+  filesEl.addEventListener('change', () => { for (const f of filesEl.files) bucket.items.add(f); filesEl.files = bucket.files; renderPreview(); });
+  setTimeout(() => {
+    const a = document.activeElement;
+    if ((!a || !['TEXTAREA', 'INPUT', 'SELECT'].includes(a.tagName)) && !bucket.files.length && !textEl.value) location.reload();
+  }, 20000);
+</script>
+</body>
+</html>
