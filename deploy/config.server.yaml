@@ -32,7 +32,7 @@ auth:
 
 data_dir: /app/data        # 宿主机 /opt/webApp/devflow/data
 
-# 客户项目：先在宿主机 git clone 到 /opt/webApp/devflow/repos/<name>，容器里的路径是 /opt/repos/<name>
+# 项目：repo_path 写 /opt/repos/<repo>（宿主机 /opt/webApp/devflow/repos/<repo>）；仓库不存在时首次用到会自动 gh repo clone（需先在容器里 gh auth login）
 projects: []
 #  - name: demo-app
 #    repo_path: "/opt/repos/demo-app"

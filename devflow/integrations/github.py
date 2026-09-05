@@ -189,6 +189,22 @@ def is_git_repo(path: str | Path) -> bool:
         return False
 
 
+def ensure_repo(repo_path: str, github_repo: str, default_branch: str = "") -> bool:
+    """repo_path 还没有本地仓库时用 gh clone 一份（服务器上第一次用到某个项目）。返回是否新 clone 了。"""
+    p = Path(repo_path)
+    if p.exists() and is_git_repo(p):
+        return False
+    if p.exists() and any(p.iterdir()):
+        raise RuntimeError(f"{repo_path} 已存在但不是 git 仓库")
+    p.parent.mkdir(parents=True, exist_ok=True)
+    args = ["repo", "clone", github_repo, str(p)]
+    if default_branch:
+        args += ["--", "--branch", default_branch]
+    log.info("clone %s → %s", github_repo, p)
+    gh(args, timeout=900)
+    return True
+
+
 def prepare_worktree(repo_path: str, base_branch: str, branch: str, worktree: str | Path,
                      from_existing: bool = False) -> None:
     """在独立 worktree 里建分支，不影响你正在用的工作目录。"""

@@ -75,8 +75,7 @@ cat <<EOF
    cd $APP_DIR
    docker compose exec devflow gh auth login        # GitHub
    docker compose exec devflow claude               # Claude Code 登录（或在 .env 写 ANTHROPIC_API_KEY 后 docker compose up -d）
-   git clone https://github.com/SparkZou/<repo>.git repos/<repo>
-   vi conf/config.yaml                              # projects 里登记仓库：repo_path: /opt/repos/<repo>
+   vi conf/config.yaml                              # projects 照本机的写，repo_path 用 /opt/repos/<repo>；仓库缺失时首次用到会自动 clone
 
  更新代码：bash $APP_DIR/deploy/deploy.sh      日志：cd $APP_DIR && docker compose logs -f
 ============================================================

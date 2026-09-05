@@ -27,7 +27,9 @@ RUN pip install . \
     && rm -rf /var/lib/apt/lists/* \
     && chmod -R a+rX /ms-playwright
 
-RUN useradd -m -u 1000 devflow && mkdir -p /app/data /opt/repos && chown -R devflow:devflow /app /opt/repos
+RUN useradd -m -u 1000 devflow && mkdir -p /app/data /opt/repos && chown -R devflow:devflow /app /opt/repos \
+    && git config --system user.name "DevFlow AI" && git config --system user.email "devflow@users.noreply.github.com" \
+    && git config --system --add safe.directory '*'
 USER devflow
 ENV HOME=/home/devflow
 EXPOSE 8765

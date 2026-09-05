@@ -360,3 +360,24 @@ def test_ignore_and_digest(tmp_path, monkeypatch):
     assert store.get(t.id).state == "ignored"
     _, body = build_digest(store, cfg)
     assert "未完成 0 个" in body
+
+
+def test_missing_repo_is_cloned_on_demand(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_clone(path, repo, branch=""):
+        calls.append((repo, branch))
+        (tmp_path / "missing").mkdir()
+        return True
+
+    monkeypatch.setattr("devflow.pipeline.github.ensure_repo", fake_clone)
+    cfg, store, p = make(tmp_path)
+    cfg.projects[0].repo_path = str(tmp_path / "missing")
+    t = Task(raw_text="x", title="t", project="demo")
+    assert p._project(t).name == "demo" and calls == [("o/r", "main")]
+    assert p._project(t).name == "demo" and len(calls) == 1  # 已存在就不再 clone
+
+    monkeypatch.setattr("devflow.pipeline.github.ensure_repo", lambda *a: (_ for _ in ()).throw(RuntimeError("gh 未登录")))
+    cfg.projects[0].repo_path = str(tmp_path / "missing2")
+    with pytest.raises(ValueError, match="gh 未登录"):
+        p._project(t)

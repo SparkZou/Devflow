@@ -691,8 +691,13 @@ class Pipeline:
             raise ValueError("任务没有归属项目，请在面板里选择项目")
         if not proj.github_repo:
             raise ValueError(f"项目 {proj.name} 未配置 github_repo")
-        if not proj.repo_path or not Path(proj.repo_path).exists():
-            raise ValueError(f"项目 {proj.name} 的 repo_path 不存在：{proj.repo_path}")
+        if not proj.repo_path:
+            raise ValueError(f"项目 {proj.name} 未配置 repo_path")
+        if not Path(proj.repo_path).exists():
+            try:
+                github.ensure_repo(proj.repo_path, proj.github_repo, proj.default_branch)
+            except Exception as e:  # noqa: BLE001
+                raise ValueError(f"项目 {proj.name} 的 repo_path 不存在，自动 clone {proj.github_repo} 也失败：{e}") from e
         return proj
 
     def _worktree(self, task: Task) -> Path:

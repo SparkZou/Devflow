@@ -144,15 +144,20 @@ def doctor(config: Optional[str] = ConfigOpt) -> None:
         if not cfg.projects:
             rows.append((False, "projects", "没有配置任何项目"))
         for p in cfg.projects:
-            problems = []
-            if not p.repo_path or not Path(p.repo_path).exists():
-                problems.append(f"repo_path 不存在: {p.repo_path}")
+            problems, notes = [], []
+            if not p.repo_path:
+                problems.append("缺 repo_path")
+            elif not Path(p.repo_path).exists():
+                if not p.github_repo:
+                    problems.append(f"repo_path 不存在: {p.repo_path}")
+                else:
+                    notes.append(f"repo_path 不存在，首次用到时自动 clone {p.github_repo}")
             elif not github.is_git_repo(p.repo_path):
                 problems.append("repo_path 不是 git 仓库")
             if not p.github_repo:
                 problems.append("缺 github_repo")
             rows.append((not problems, f"项目 {p.name}",
-                         "; ".join(problems) or f"{p.github_repo} · {p.deploy_url or '无部署地址（跳过 AI 测试）'}"))
+                         "; ".join(problems + notes) or f"{p.github_repo} · {p.deploy_url or '无部署地址（跳过 AI 测试）'}"))
 
     for ok, name, detail in rows:
         typer.echo(f"{'✅' if ok else '❌'} {name:<20} {detail}")
