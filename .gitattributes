@@ -1,0 +1,10 @@
+# 服务器/容器里执行的文件必须是 LF（Windows 上 checkout 也不要转成 CRLF）
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.snippet text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.py text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+*.ps1 text eol=crlf
