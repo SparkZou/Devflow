@@ -2,10 +2,16 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DevFlow">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/icon-180.png">
+<link rel="icon" href="/static/icon-192.png">
 <title>登录 · DevFlow AI</title>
 <style>
-  :root { --bg:#f6f7f9; --card:#fff; --line:#e3e6ea; --ink:#1f2328; --mute:#6b7280; --accent:#2563eb; --bad:#b91c1c; }
+  :root { color-scheme: light; --bg:#f6f7f9; --card:#fff; --line:#e3e6ea; --ink:#1f2328; --mute:#6b7280; --accent:#2563eb; --bad:#b91c1c; }
   * { box-sizing: border-box; }
   body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
          font: 14px/1.5 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background:var(--bg); color:var(--ink); }
@@ -13,9 +19,9 @@
   h1 { font-size:20px; margin:0 0 4px; }
   .mute { color:var(--mute); font-size:12px; margin-bottom:18px; }
   label { display:block; font-size:12px; color:var(--mute); margin-top:12px; }
-  input { width:100%; border:1px solid var(--line); border-radius:6px; padding:8px 10px; font:inherit; background:#fff; margin-top:4px; }
+  input { width:100%; border:1px solid var(--line); border-radius:6px; padding:10px; font:inherit; font-size:16px; background:#fff; color:var(--ink); margin-top:4px; }
   input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.15); }
-  button { width:100%; margin-top:18px; border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:6px; padding:9px 12px; font:inherit; cursor:pointer; }
+  button { -webkit-appearance:none; appearance:none; width:100%; margin-top:18px; font:inherit; font-size:16px; padding:11px 12px; border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:6px; cursor:pointer; }
   button:hover { filter:brightness(1.05); }
   .err { color:var(--bad); font-size:13px; margin-top:12px; }
 </style>

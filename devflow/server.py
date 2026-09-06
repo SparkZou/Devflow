@@ -9,6 +9,7 @@ from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
@@ -52,6 +53,7 @@ def _safe_back(value: str) -> str:
 def create_app(cfg: Config, store: Store, pipeline: Pipeline, monitor: SiteMonitor | None = None) -> FastAPI:
     app = FastAPI(title="DevFlow AI", docs_url="/api/docs", redoc_url=None)
     monitor = monitor or SiteMonitor(cfg)
+    app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
     install_auth(app, cfg, TEMPLATES)  # 除 /login /logout /health 外都要登录（或 HTTP Basic）
 
     def ctx(request: Request, **kw) -> dict:
@@ -234,6 +236,16 @@ def create_app(cfg: Config, store: Store, pipeline: Pipeline, monitor: SiteMonit
             pipeline.update(task_id, **fields)
             return pipeline.approve(task_id)
         raise ValueError(f"未知操作 {action}")
+
+    @app.get("/manifest.webmanifest")
+    def manifest():
+        """手机「添加到主屏幕」后以独立 App 形式打开。"""
+        return JSONResponse({
+            "name": "DevFlow AI", "short_name": "DevFlow", "start_url": "/", "display": "standalone",
+            "background_color": "#f6f7f9", "theme_color": "#2563eb",
+            "icons": [{"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
+                      {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"}],
+        }, media_type="application/manifest+json")
 
     # ------------------------------------------------------------ JSON API（CLI 用）
     @app.get("/health")

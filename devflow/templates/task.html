@@ -2,10 +2,15 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/icon-180.png">
+<link rel="icon" href="/static/icon-192.png">
 <title>#{{ t.id }} {{ t.title }} · DevFlow AI</title>
 <style>
-  :root { --bg:#f6f7f9; --card:#fff; --line:#e3e6ea; --ink:#1f2328; --mute:#6b7280; --accent:#2563eb; --bad:#b91c1c; }
+  :root { color-scheme: light; --bg:#f6f7f9; --card:#fff; --line:#e3e6ea; --ink:#1f2328; --mute:#6b7280; --accent:#2563eb; --bad:#b91c1c; }
   * { box-sizing: border-box; }
   body { margin:0; font: 14px/1.6 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background:var(--bg); color:var(--ink); }
   header { display:flex; align-items:center; gap:16px; padding:12px 24px; background:#fff; border-bottom:1px solid var(--line); }
@@ -13,15 +18,23 @@
   header h1 { font-size:17px; margin:0; }
   .wrap { padding:16px 24px; max-width:1200px; margin:0 auto; display:grid; grid-template-columns: 1fr 380px; gap:16px; }
   @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } }
+  @media (max-width: 700px) {
+    header { padding:10px 14px; gap:10px; flex-wrap:wrap; }
+    header h1 { font-size:16px; flex:1 1 100%; order:2; }
+    .wrap { padding:12px; gap:12px; }
+    input[type=text], select, textarea { font-size:16px; padding:9px 10px; }
+    button { min-height:40px; padding:8px 14px; }
+    button.primary { width:100%; margin-right:0; font-size:16px; font-weight:600; }
+  }
   .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:14px; }
   .card h3 { margin:0 0 8px; font-size:14px; color:var(--mute); text-transform:uppercase; letter-spacing:.04em; }
   pre, .pre { white-space:pre-wrap; word-break:break-word; font:inherit; margin:0; }
   .b { font-size:11px; padding:1px 7px; border-radius:999px; background:#eef2f7; color:#374151; margin-right:4px; }
   .b.state { background:#ede9fe; color:#5b21b6; }
   label { display:block; font-size:12px; color:var(--mute); margin-top:8px; }
-  input[type=text], select, textarea { width:100%; border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; background:#fff; }
+  input[type=text], select, textarea { width:100%; border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; background:#fff; color:var(--ink); }
   textarea { min-height:120px; resize:vertical; }
-  button { border:1px solid var(--line); background:#fff; border-radius:6px; padding:6px 12px; font:inherit; cursor:pointer; margin-right:6px; margin-top:8px; }
+  button { -webkit-appearance:none; appearance:none; border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:6px; padding:6px 12px; font:inherit; cursor:pointer; margin-right:6px; margin-top:8px; }
   button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
   button.danger { color:var(--bad); }
   ul { margin:4px 0; padding-left:20px; }

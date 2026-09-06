@@ -63,8 +63,8 @@ def test_monitor_table_and_refresh(tmp_path, monkeypatch):
     cfg, store, p, mon = setup(tmp_path)
     with TestClient(create_app(cfg, store, p, mon), follow_redirects=False) as c:
         html = c.get("/", headers=AUTH).text
-        assert "2026-09-16（剩 10 天）" in html and "cert-bad" in html
-        assert "2026-09-16（剩 80 天）" in html and "cert-ok" in html
+        assert "2026-09-16" in html and "（剩 10 天）" in html and "cert-bad" in html
+        assert "（剩 80 天）" in html and "cert-ok" in html
         assert "✅ 200" in html and "❌ 502" in html and "Let&#39;s Encrypt" in html
         assert "最近到期：demo.example.com" in html
 

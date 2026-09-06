@@ -2,13 +2,20 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DevFlow">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/icon-180.png">
+<link rel="icon" href="/static/icon-192.png">
 <title>DevFlow AI</title>
 <style>
-  :root { --bg:#f6f7f9; --card:#fff; --line:#e3e6ea; --ink:#1f2328; --mute:#6b7280; --accent:#2563eb; --warn:#b45309; --ok:#15803d; --bad:#b91c1c; }
+  :root { --bg:#f6f7f9; --card:#fff; --line:#e3e6ea; --ink:#1f2328; --mute:#6b7280; --accent:#2563eb; --warn:#b45309; --ok:#15803d; --bad:#b91c1c; color-scheme: light; }
   * { box-sizing: border-box; }
   body { margin:0; font: 14px/1.5 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background:var(--bg); color:var(--ink); }
-  header { display:flex; align-items:center; gap:16px; padding:12px 24px; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:2; height:49px; }
+  header { display:flex; align-items:center; gap:16px; padding:0 24px; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:3; height:49px; }
   header h1 { font-size:18px; margin:0; white-space:nowrap; }
   header .mute { color:var(--mute); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   header .nav { margin-left:auto; display:flex; gap:14px; white-space:nowrap; }
@@ -22,36 +29,38 @@
   nav.side a.head.sel { color:#1e3a8a; }
   nav.side a.item { padding-left:18px; }
   nav.side .name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .cnt { font-size:11px; padding:0 6px; border-radius:999px; background:#e0f2fe; color:#075985; line-height:18px; }
+  .cnt { font-size:11px; padding:0 6px; border-radius:999px; background:#e0f2fe; color:#075985; line-height:18px; white-space:nowrap; }
   .cnt.warn { background:#ffedd5; color:#9a3412; font-weight:600; }
   .cnt.bad { background:#fee2e2; color:#991b1b; }
   nav.side .foot { margin:14px 10px 6px; padding-top:10px; border-top:1px solid var(--line); font-size:12px; color:var(--mute); }
-  .main { flex:1; min-width:0; padding:16px 24px; max-width:1500px; }
-  .pagehead { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+  .main { flex:1; min-width:0; padding:16px 24px; max-width:1500px; display:grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap:16px; align-content:start; }
+  .main > .full { grid-column: 1 / -1; }
+  .pagehead { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:0 0 -4px; }
   .pagehead h2 { font-size:17px; margin:0; }
   .pagehead .links a { margin-right:12px; color:var(--accent); font-size:12px; text-decoration:none; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px; }
-  .mon { margin-bottom:18px; padding:10px 14px; }
+  .mon { margin:0; padding:10px 14px; }
   .mon .mhead { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:600; }
   .mon .mhead .mute { font-weight:400; color:var(--mute); font-size:12px; }
   .mon .mhead form { margin-left:auto; }
+  .mon .tbl { overflow-x:auto; }
   .mon table { width:100%; border-collapse:collapse; margin-top:6px; font-size:13px; }
-  .mon th { text-align:left; color:var(--mute); font-weight:500; font-size:12px; padding:4px 8px; border-bottom:1px solid var(--line); }
-  .mon td { padding:6px 8px; border-bottom:1px solid #f1f3f5; vertical-align:top; }
+  .mon th { text-align:left; color:var(--mute); font-weight:500; font-size:12px; padding:4px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  .mon td { padding:6px 8px; border-bottom:1px solid #f1f3f5; vertical-align:top; white-space:nowrap; }
   .mon tr:last-child td { border-bottom:0; }
   .mon td a { color:var(--accent); text-decoration:none; }
+  .mon td .sub { display:none; font-size:11px; color:var(--mute); }
   .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:var(--warn); }
   .cert-ok { color:var(--ok); } .cert-warn { color:var(--warn); font-weight:600; } .cert-bad { color:var(--bad); font-weight:600; }
-  .inbox { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:18px; }
-  .inbox textarea { width:100%; min-height:88px; border:1px solid var(--line); border-radius:8px; padding:10px; font:inherit; resize:vertical; }
+  .inbox { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .inbox textarea { width:100%; min-height:88px; border:1px solid var(--line); border-radius:8px; padding:10px; font:inherit; resize:vertical; color:var(--ink); background:#fff; }
   .inbox .row { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; align-items:center; }
   .inbox .row .hint { color:var(--mute); font-size:12px; margin-left:auto; }
-  select, input[type=text] { border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; background:#fff; }
-  button { border:1px solid var(--line); background:#fff; border-radius:6px; padding:6px 12px; font:inherit; cursor:pointer; }
+  select, input[type=text] { border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; background:#fff; color:var(--ink); }
+  button { border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:6px; padding:6px 12px; font:inherit; cursor:pointer; -webkit-appearance:none; appearance:none; }
   button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
   button.danger { color:var(--bad); }
   button.small { padding:3px 10px; font-size:12px; }
-  .cols { display:grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap:16px; }
   .col h2 { font-size:15px; margin:0 0 10px; }
   .card.action { border-left:4px solid var(--warn); }
   .card .title { font-weight:600; text-decoration:none; color:var(--ink); }
@@ -67,18 +76,55 @@
   .filebar img { height:44px; border:1px solid var(--line); border-radius:4px; }
   .filebar input[type=file] { display:none; }
   .filebar label { color:var(--accent); cursor:pointer; }
+  .mob { display:none; }
   .links a { margin-right:10px; color:var(--accent); font-size:12px; text-decoration:none; }
   .actions { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
   .actions form { display:inline; }
   .last { color:var(--mute); font-size:12px; margin-top:4px; white-space:pre-wrap; }
   .empty { color:var(--mute); font-size:13px; padding:12px; }
   .err { color:var(--bad); font-size:12px; }
-  @media (max-width: 900px) {
+
+  /* ---------- 手机：顶部横滑项目条 + 收件框优先 + 单列 ---------- */
+  @media (max-width: 700px) {
+    header { padding:0 14px; gap:10px; height:48px; }
+    header h1 { font-size:17px; }
+    header .mute { display:none; }
     .layout { display:block; }
-    nav.side { position:static; width:auto; height:auto; border-right:0; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:2px; }
-    nav.side a.head { margin-top:0; }
-    nav.side .foot { width:100%; }
-    .main { padding:12px; }
+    nav.side { position:sticky; top:48px; z-index:2; width:auto; height:auto; border-right:0; border-bottom:1px solid var(--line);
+               display:flex; flex-wrap:nowrap; overflow-x:auto; gap:6px; padding:8px 12px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+    nav.side::-webkit-scrollbar { display:none; }
+    nav.side a { flex:none; padding:5px 11px; border:1px solid var(--line); border-radius:999px; font-size:13px; white-space:nowrap; }
+    nav.side a.sel { border-color:#c7d2fe; }
+    nav.side a.head { margin:0 0 0 6px; padding:5px 4px; border:0; text-transform:none; letter-spacing:0; color:var(--mute); font-size:12px; }
+    nav.side a.head.sel { color:#1e3a8a; font-weight:600; }
+    nav.side a.item { padding-left:11px; }
+    nav.side .empty { display:none; }
+    nav.side .foot { display:none; }
+    .main { display:flex; flex-direction:column; gap:12px; padding:12px; }
+    .pagehead { order:0; margin:0; }
+    .pagehead h2 { font-size:18px; }
+    .inbox { order:1; padding:12px; }
+    .col.action { order:2; }
+    .mon { order:3; }
+    .col.active { order:4; }
+    .col.done { order:5; }
+    .inbox textarea { min-height:120px; font-size:16px; }   /* 16px：iOS 聚焦时不再自动放大 */
+    .inbox .row select, .inbox .row input[type=text] { flex:1 1 45%; min-width:0; font-size:16px; padding:9px 10px; }
+    .inbox .row button.primary { flex:1 1 100%; padding:12px; font-size:16px; font-weight:600; }
+    .inbox .row .hint { display:none; }
+    .desk { display:none; } .mob { display:inline; }
+    .filebar label { border:1px solid var(--line); border-radius:999px; padding:4px 12px; }
+    .mon .mhead { font-size:14px; }
+    .mon table { font-size:13px; }
+    .mon th.addr, .mon td.addr, .mon th.issuer, .mon td.issuer { display:none; }
+    .mon td .sub, .mon td .days, .mon td .ms { display:block; }
+    .mon td .days { font-size:12px; }
+    .mon td .ms { font-size:11px; }
+    .card { padding:12px; }
+    .card .title { font-size:15px; }
+    .actions button { min-height:38px; padding:8px 14px; }
+    .actions select { min-height:38px; font-size:16px; }
+    .col h2 { font-size:15px; margin-bottom:8px; }
   }
 </style>
 </head>
@@ -116,7 +162,7 @@
 </nav>
 
 <div class="main">
-<div class="pagehead">
+<div class="pagehead full">
   <h2>{{ title }}</h2>
   <span class="links">
   {% for p in detail_projects %}
@@ -128,37 +174,39 @@
 </div>
 
 {% if monitor_rows %}
-<section class="card mon">
+<section class="card mon full">
   <div class="mhead">🩺 线上监控
     <span class="mute">每 {{ monitor_ttl_min }} 分钟自动检查{% if refreshed_at %} · 上次 {{ refreshed_at.strftime('%m-%d %H:%M') }}{% endif %}</span>
     <form method="post" action="/monitor/refresh"><input type="hidden" name="back" value="{{ back }}"><button class="small" type="submit">立即检查</button></form>
   </div>
+  <div class="tbl">
   <table>
-    <tr><th>项目</th><th>地址</th><th>健康</th><th>HTTPS 证书到期</th><th>签发方</th></tr>
+    <tr><th>项目</th><th class="addr">地址</th><th>健康</th><th>HTTPS 证书到期</th><th class="issuer">签发方</th></tr>
     {% for row in monitor_rows %}{% set p = row.project %}{% set r = row.result %}
     <tr>
-      <td>{{ disp(p.name) }}{% if is_own(p.name) %} <span class="b own">自有</span>{% endif %}</td>
-      <td><a href="{{ p.deploy_url }}" target="_blank">{{ p.deploy_url|replace('https://','')|replace('http://','') }}</a></td>
+      <td>{{ disp(p.name) }}{% if is_own(p.name) %} <span class="b own">自有</span>{% endif %}<span class="sub">{{ p.deploy_url|replace('https://','')|replace('http://','') }}</span></td>
+      <td class="addr"><a href="{{ p.deploy_url }}" target="_blank">{{ p.deploy_url|replace('https://','')|replace('http://','') }}</a></td>
       <td>{% if r is none %}<span class="mute">检查中…</span>
-          {% elif r.ok %}<span class="ok">✅ {{ r.status }}</span> <span class="mute">{{ r.ms }} ms</span>
+          {% elif r.ok %}<span class="ok">✅ {{ r.status }}</span> <span class="mute ms">{{ r.ms }} ms</span>
           {% else %}<span class="bad">❌ {{ r.status or r.error }}</span>{% endif %}</td>
       <td>{% if r is none %}<span class="mute">—</span>
-          {% elif r.cert_expires %}<span class="{{ 'cert-bad' if r.cert_days <= 14 else ('cert-warn' if r.cert_days <= 30 else 'cert-ok') }}">{{ r.cert_expires.strftime('%Y-%m-%d') }}（剩 {{ r.cert_days }} 天）</span>
+          {% elif r.cert_expires %}<span class="{{ 'cert-bad' if r.cert_days <= 14 else ('cert-warn' if r.cert_days <= 30 else 'cert-ok') }}">{{ r.cert_expires.strftime('%Y-%m-%d') }}<span class="days">（剩 {{ r.cert_days }} 天）</span></span>
           {% else %}<span class="bad" title="{{ r.cert_error }}">❌ {{ r.cert_error[:40] }}</span>{% endif %}</td>
-      <td class="mute">{{ r.cert_issuer if r else '' }}</td>
+      <td class="issuer mute">{{ r.cert_issuer if r else '' }}</td>
     </tr>
     {% endfor %}
   </table>
+  </div>
 </section>
 {% endif %}
 
-<section class="inbox">
+<section class="inbox full">
   <form method="post" action="/inbox" enctype="multipart/form-data" id="inbox">
     <input type="hidden" name="back" value="{{ back }}">
-    <textarea name="text" id="text" placeholder="在微信 / 钉钉里复制聊天记录或截图，到这个页面 Ctrl+V 就行（文字和图片都可以，多张也行），然后点「交给 AI」。（剪贴板监听开着时，在微信里 Ctrl+C 后不用粘贴也会自动收进来）"></textarea>
+    <textarea name="text" id="text" placeholder="把微信 / 钉钉里的需求粘贴到这里（文字、截图都可以，多张也行），然后点「交给 AI」"></textarea>
     <div class="filebar">
-      <span id="preview">📎 截图：在微信里复制图片后，在本页任意位置 Ctrl+V</span>
-      <label for="files">或选择图片文件…</label>
+      <span id="preview"><span class="desk">📎 截图：在微信里复制图片后，在本页任意位置 Ctrl+V</span><span class="mob">📎 截图：长按输入框「粘贴」，或</span></span>
+      <label for="files"><span class="desk">或选择图片文件…</span><span class="mob">📷 从相册选择</span></label>
       <input type="file" name="files" id="files" accept="image/*" multiple title="选择截图文件">
     </div>
     <div class="row">
@@ -227,30 +275,30 @@
 </div>
 {%- endmacro %}
 
-<main class="cols">
-  <section class="col">
-    <h2>⚠️ 需要你处理（{{ action|length }}）</h2>
-    {% for t in action %}{{ card(t, True) }}{% else %}<div class="empty">没有等你的事 🎉</div>{% endfor %}
-  </section>
-  <section class="col">
-    <h2>🔄 自动进行中（{{ active|length }}）</h2>
-    {% for t in active %}{{ card(t) }}{% else %}<div class="empty">空</div>{% endfor %}
-  </section>
-  <section class="col">
-    <h2>✅ 最近完成 / 非需求</h2>
-    {% for t in done %}{{ card(t) }}{% else %}<div class="empty">空</div>{% endfor %}
-  </section>
-</main>
+<section class="col action">
+  <h2>⚠️ 需要你处理（{{ action|length }}）</h2>
+  {% for t in action %}{{ card(t, True) }}{% else %}<div class="empty">没有等你的事 🎉</div>{% endfor %}
+</section>
+<section class="col active">
+  <h2>🔄 自动进行中（{{ active|length }}）</h2>
+  {% for t in active %}{{ card(t) }}{% else %}<div class="empty">空</div>{% endfor %}
+</section>
+<section class="col done">
+  <h2>✅ 最近完成 / 非需求</h2>
+  {% for t in done %}{{ card(t) }}{% else %}<div class="empty">空</div>{% endfor %}
+</section>
 </div>
 </div>
 <script>
-  // 在页面任意位置 Ctrl+V：图片进附件，文字进输入框
+  // 粘贴：图片进附件，文字进输入框（电脑 Ctrl+V 在页面任意位置都行；手机在输入框长按「粘贴」）
   const filesEl = document.getElementById('files'), preview = document.getElementById('preview'), textEl = document.getElementById('text');
   const bucket = new DataTransfer();
+  const idleHint = preview.innerHTML;
   function renderPreview() {
     preview.innerHTML = '';
     for (const f of bucket.files) { const img = document.createElement('img'); img.src = URL.createObjectURL(f); preview.appendChild(img); }
-    preview.insertAdjacentText('beforeend', bucket.files.length ? ` 已附 ${bucket.files.length} 张截图，点「交给 AI」提交` : '📎 截图：在微信里复制图片后，在本页任意位置 Ctrl+V');
+    if (bucket.files.length) preview.insertAdjacentText('beforeend', ` 已附 ${bucket.files.length} 张截图，点「交给 AI」提交`);
+    else preview.innerHTML = idleHint;
   }
   document.addEventListener('paste', e => {
     const items = [...(e.clipboardData?.items || [])].filter(i => i.type.startsWith('image/'));

@@ -18,7 +18,7 @@ from .config import Config
 
 log = logging.getLogger("devflow.auth")
 COOKIE = "devflow_session"
-OPEN_PATHS = {"/login", "/logout", "/health", "/favicon.ico"}
+OPEN_PATHS = {"/login", "/logout", "/health", "/favicon.ico", "/manifest.webmanifest"}
 MAX_FAILS, LOCK_SECONDS = 5, 60  # 同一 IP 60 秒内错 5 次 → 锁 60 秒
 
 
@@ -105,7 +105,7 @@ def install_auth(app: FastAPI, cfg: Config, templates: Jinja2Templates) -> Sessi
     @app.middleware("http")
     async def require_login(request: Request, call_next):
         path = request.url.path
-        if not cfg.auth.enabled or path in OPEN_PATHS:
+        if not cfg.auth.enabled or path in OPEN_PATHS or path.startswith("/static/"):
             return await call_next(request)
         if sessions.valid(request.cookies.get(COOKIE)) or sessions.basic_ok(request.headers.get("authorization")):
             return await call_next(request)

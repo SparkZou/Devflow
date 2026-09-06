@@ -31,4 +31,4 @@ devflow = "devflow.cli:app"
 include = ["devflow*"]
 
 [tool.setuptools.package-data]
-devflow = ["templates/*.html"]
+devflow = ["templates/*.html", "static/*"]
