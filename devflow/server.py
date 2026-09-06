@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from .auth import install_auth
 from .config import Config
 from .models import STATE_LABELS, needs_action
+from .monitor import SiteMonitor
 from .pipeline import Pipeline
 from .store import Store
 
@@ -39,14 +40,24 @@ def _split_choice(value: str) -> tuple[str, str]:
     return value, ""
 
 
-def create_app(cfg: Config, store: Store, pipeline: Pipeline) -> FastAPI:
+def _back(request: Request) -> str:
+    """当前页面地址（含 ?project=…），表单提交后跳回来。"""
+    return request.url.path + (f"?{request.url.query}" if request.url.query else "")
+
+
+def _safe_back(value: str) -> str:
+    return value if value.startswith("/") and not value.startswith("//") else "/"
+
+
+def create_app(cfg: Config, store: Store, pipeline: Pipeline, monitor: SiteMonitor | None = None) -> FastAPI:
     app = FastAPI(title="DevFlow AI", docs_url="/api/docs", redoc_url=None)
+    monitor = monitor or SiteMonitor(cfg)
     install_auth(app, cfg, TEMPLATES)  # 除 /login /logout /health 外都要登录（或 HTTP Basic）
 
     def ctx(request: Request, **kw) -> dict:
         return {"request": request, "cfg": cfg, "labels": STATE_LABELS, "ai_backend": pipeline.ai.backend.name,
                 "choices": cfg.choices(), "disp": cfg.display_name, "is_own": cfg.is_own,
-                "auth_on": cfg.auth.enabled, **kw}
+                "auth_on": cfg.auth.enabled, "back": _back(request), **kw}
 
     def save_uploads(files: list[UploadFile]) -> list[str]:
         paths: list[str] = []
@@ -64,17 +75,98 @@ def create_app(cfg: Config, store: Store, pipeline: Pipeline) -> FastAPI:
             paths.append(str(p))
         return paths
 
+    # ------------------------------------------------------------ 左栏导航
+    def task_keys(t) -> set[str]:
+        """一条任务在左栏属于哪些条目：项目名、所属 group、客户/自有分类；没归属的记 none。"""
+        p = cfg.project(t.project) if t.project else None
+        if p:
+            keys = {p.name, f"kind:{p.kind}"}
+            if p.group:
+                keys.add(f"group:{p.group}")
+            return keys
+        g = t.meta.get("group") if isinstance(t.meta, dict) else ""
+        if g:
+            members = cfg.group_members(g)
+            return {f"group:{g}", f"kind:{members[0].kind if members else 'customer'}"}
+        return {"none"}
+
+    def selection(sel: str) -> tuple[str, list, list]:
+        """选中的条目 → 页面标题、监控涉及的项目、顶部展示链接的项目。"""
+        if not sel:
+            return "全部项目", cfg.projects, []
+        if sel == "kind:own":
+            return "自己的项目", [p for p in cfg.projects if p.kind == "own"], []
+        if sel == "kind:customer":
+            return "客户项目", [p for p in cfg.projects if p.kind != "own"], []
+        if sel == "none":
+            return "未归类（等你选项目）", [], []
+        if sel.startswith("group:"):
+            members = cfg.group_members(sel[6:])
+            return sel[6:], members, members
+        p = cfg.project(sel)
+        return cfg.display_name(sel), [p], [p]
+
     # ------------------------------------------------------------ pages
     @app.get("/", response_class=HTMLResponse)
-    def index(request: Request):
+    def index(request: Request, sel: str = Query("", alias="project")):
         cfg.reload_if_changed()  # 改了 config.yaml 刷新面板即生效，不用重启
+        choices = cfg.choices()
+        known = {"", "kind:own", "kind:customer", "none", *(c["value"] for c in choices), *(p.name for p in cfg.projects)}
+        if sel not in known:
+            sel = ""
         tasks = store.list(limit=300)
-        action = [t for t in tasks if needs_action(t, cfg.gates)]
+
+        counts: dict[str, list[int]] = {}
+        for t in tasks:
+            if t.is_done:
+                continue
+            slot = 0 if needs_action(t, cfg.gates) else 1
+            for k in task_keys(t) | {""}:
+                counts.setdefault(k, [0, 0])[slot] += 1
+
+        def cert_min(projs) -> int | None:
+            days = [r["cert_days"] for p in projs if p and (r := monitor.for_project(p)) and r["cert_days"] is not None]
+            return min(days) if days else None
+
+        def item(value: str, label: str, projs: list) -> dict:
+            c = counts.get(value, [0, 0])
+            return {"value": value, "label": label, "action": c[0], "active": c[1], "selected": value == sel,
+                    "cert_days": cert_min(projs)}
+
+        groups = []
+        for kind, title in (("customer", "客户项目"), ("own", "自己的项目")):
+            items = []
+            for c in choices:
+                if (c["kind"] == "own") != (kind == "own"):
+                    continue
+                members = cfg.group_members(c["value"][6:]) if c["value"].startswith("group:") else [cfg.project(c["value"])]
+                items.append(item(c["value"], c["label"], members))
+            g = item(f"kind:{kind}", title, [p for p in cfg.projects if (p.kind == "own") == (kind == "own")])
+            g.update(title=title, entries=items)
+            groups.append(g)
+        nav = {"all": item("", "全部", cfg.projects), "groups": groups, "unassigned": item("none", "未归类", [])}
+
+        title, mon_projects, detail = selection(sel)
+        visible = tasks if not sel else [t for t in tasks if sel in task_keys(t)]
+        action = [t for t in visible if needs_action(t, cfg.gates)]
         action_ids = {t.id for t in action}
-        active = [t for t in tasks if not t.is_done and t.id not in action_ids]
-        done = [t for t in tasks if t.is_done][:30]
-        return TEMPLATES.TemplateResponse(
-            request, "dashboard.html", ctx(request, action=action, active=active, done=done))
+        active = [t for t in visible if not t.is_done and t.id not in action_ids]
+        done = [t for t in visible if t.is_done][:30]
+        soonest = min((row["result"] for row in monitor.rows() if row["result"] and row["result"]["cert_days"] is not None),
+                      key=lambda r: r["cert_days"], default=None)
+        return TEMPLATES.TemplateResponse(request, "dashboard.html", ctx(
+            request, action=action, active=active, done=done, nav=nav, title=title, detail_projects=detail,
+            monitor_rows=monitor.rows(mon_projects), refreshed_at=monitor.refreshed_at,
+            monitor_ttl_min=max(1, monitor.ttl // 60), cert_soonest=soonest,
+            preselect=sel if sel in {c["value"] for c in choices} else ""))
+
+    @app.post("/monitor/refresh")
+    def monitor_refresh(back: str = Form("/")):
+        try:
+            monitor.refresh()
+        except Exception as e:  # noqa: BLE001
+            log.warning("手动刷新监控失败: %s", e)
+        return RedirectResponse(_safe_back(back), status_code=303)
 
     @app.get("/task/{task_id}", response_class=HTMLResponse)
     def task_page(request: Request, task_id: int):
@@ -102,12 +194,12 @@ def create_app(cfg: Config, store: Store, pipeline: Pipeline) -> FastAPI:
     # ------------------------------------------------------------ form actions
     @app.post("/inbox")
     def inbox_form(text: str = Form(""), project: str = Form(""), customer: str = Form(""),
-                   source: str = Form("wechat"), files: list[UploadFile] = File(default=[])):
+                   source: str = Form("wechat"), files: list[UploadFile] = File(default=[]), back: str = Form("/")):
         paths = save_uploads(files)
         if text.strip() or paths:
             proj, group = _split_choice(project)
             pipeline.ingest(text, source=source, project=proj, group=group, customer=customer, attachments=paths)
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse(_safe_back(back), status_code=303)
 
     @app.post("/task/{task_id}/{action}")
     def task_action(task_id: int, action: str, note: str = Form(""),

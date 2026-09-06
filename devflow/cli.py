@@ -210,14 +210,18 @@ def serve(config: Optional[str] = ConfigOpt,
                                attach_dir=cfg.data_path / "attachments")
         else:
             log.warning("dingtalk.enabled=true 但没有 client_id/client_secret，钉钉机器人未启动")
-    start_scheduler(cfg, store, notifier)
+    from .monitor import SiteMonitor
+
+    monitor = SiteMonitor(cfg)
+    monitor.start()  # 每 10 分钟检查各项目线上健康 + HTTPS 证书到期
+    start_scheduler(cfg, store, notifier, monitor)
 
     # 上次中断的任务按状态接着跑
     resumed = pipeline.resume()
     if resumed:
         log.info("恢复了 %d 个中断的任务", resumed)
 
-    web = create_app(cfg, store, pipeline)
+    web = create_app(cfg, store, pipeline, monitor)
     if cfg.dashboard.open_browser and not no_browser:
         threading.Timer(1.5, lambda: webbrowser.open(cfg.dashboard_url)).start()
     typer.secho(f"\nDevFlow AI 运行中：{cfg.dashboard_url}   （Ctrl+C 退出）", fg="green")
@@ -366,7 +370,14 @@ def digest(config: Optional[str] = ConfigOpt,
     from .scheduler import build_digest
     from .store import Store
 
-    title, body = build_digest(Store(cfg.db_path), cfg)
+    from .monitor import SiteMonitor
+
+    monitor = SiteMonitor(cfg)
+    try:
+        monitor.refresh()
+    except Exception as e:  # noqa: BLE001
+        typer.secho(f"线上监控检查失败：{e}", fg="yellow")
+    title, body = build_digest(Store(cfg.db_path), cfg, monitor)
     typer.echo(f"{title}\n\n{body}")
     if send_:
         Notifier(cfg).me(title, body)

@@ -34,7 +34,7 @@
 </head>
 <body>
 <header>
-  <a href="/">← 面板</a>
+  <a href="/{{ ('?project=' ~ t.project) if t.project else '' }}">← 面板</a>
   <h1>#{{ t.id }} {{ t.title or t.raw_text[:40] }}</h1>
   <span><span class="b">{{ t.priority }}</span><span class="b state">{{ t.label }}</span>{% if t.is_investigation %}<span class="b">🔍 检查类</span>{% endif %}{% if t.project %}<span class="b">📁 {{ disp(t.project) }}</span>{% if is_own(t.project) %}<span class="b">自有</span>{% endif %}{% endif %}{% if t.customer %}<span class="b">👤 {{ t.customer }}</span>{% endif %}{% if t.deadline %}<span class="b">⏰ {{ t.deadline }}</span>{% endif %}</span>
   {% if auth_on %}<a href="/logout" style="margin-left:auto" title="退出登录">退出</a>{% endif %}

@@ -13,7 +13,7 @@ from .store import Store
 log = logging.getLogger("devflow.scheduler")
 
 
-def build_digest(store: Store, cfg: Config) -> tuple[str, str]:
+def build_digest(store: Store, cfg: Config, monitor=None) -> tuple[str, str]:
     tasks = [t for t in store.list(limit=500) if not t.is_done]
     action = [t for t in tasks if needs_action(t, cfg.gates)]
     action_ids = {t.id for t in action}
@@ -36,12 +36,16 @@ def build_digest(store: Store, cfg: Config) -> tuple[str, str]:
     if others:
         lines += ["", "**自动进行中：**"]
         lines += [line(t) for t in sorted(others, key=lambda t: (order.get(t.priority, 9), t.deadline or "9"))]
+    expiring = monitor.expiring() if monitor else []
+    if expiring:
+        lines += ["", "**HTTPS 证书快到期：**"]
+        lines += [f"- 🔒 {r['host']} 证书 {r['cert_days']} 天后到期（{r['cert_expires']:%Y-%m-%d}，{p.name}）" for p, r in expiring]
     lines += ["", f"面板：{cfg.dashboard_url}"]
     title = f"DevFlow 日报 {dt.date.today().isoformat()}"
     return title, "\n".join(lines)
 
 
-def start_scheduler(cfg: Config, store: Store, notifier: Notifier) -> threading.Thread:
+def start_scheduler(cfg: Config, store: Store, notifier: Notifier, monitor=None) -> threading.Thread:
     def _loop():
         log.info("提醒计划已启动：%s", ", ".join(cfg.digest.times))
         stop = threading.Event()
@@ -55,7 +59,7 @@ def start_scheduler(cfg: Config, store: Store, notifier: Notifier) -> threading.
                 continue
             store.kv_set("last_digest", key)
             try:
-                title, body = build_digest(store, cfg)
+                title, body = build_digest(store, cfg, monitor)
                 notifier.me(title, body)
             except Exception:  # noqa: BLE001
                 log.exception("发送日报失败")

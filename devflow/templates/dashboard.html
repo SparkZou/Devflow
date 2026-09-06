@@ -8,12 +8,40 @@
   :root { --bg:#f6f7f9; --card:#fff; --line:#e3e6ea; --ink:#1f2328; --mute:#6b7280; --accent:#2563eb; --warn:#b45309; --ok:#15803d; --bad:#b91c1c; }
   * { box-sizing: border-box; }
   body { margin:0; font: 14px/1.5 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background:var(--bg); color:var(--ink); }
-  header { display:flex; align-items:center; gap:16px; padding:12px 24px; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:2; }
-  header h1 { font-size:18px; margin:0; }
-  header .mute { color:var(--mute); font-size:12px; }
-  header .nav { margin-left:auto; display:flex; gap:14px; }
+  header { display:flex; align-items:center; gap:16px; padding:12px 24px; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:2; height:49px; }
+  header h1 { font-size:18px; margin:0; white-space:nowrap; }
+  header .mute { color:var(--mute); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  header .nav { margin-left:auto; display:flex; gap:14px; white-space:nowrap; }
   header a { color:var(--accent); text-decoration:none; }
-  .wrap { padding:16px 24px; max-width:1500px; margin:0 auto; }
+  .layout { display:flex; align-items:flex-start; }
+  nav.side { width:250px; flex:none; background:#fff; border-right:1px solid var(--line); position:sticky; top:49px; height:calc(100vh - 49px); overflow:auto; padding:10px 8px; }
+  nav.side a { display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:6px; color:var(--ink); text-decoration:none; font-size:13px; }
+  nav.side a:hover { background:#f1f5f9; }
+  nav.side a.sel { background:#e0e7ff; color:#1e3a8a; font-weight:600; }
+  nav.side a.head { margin-top:10px; font-size:12px; color:var(--mute); text-transform:uppercase; letter-spacing:.04em; }
+  nav.side a.head.sel { color:#1e3a8a; }
+  nav.side a.item { padding-left:18px; }
+  nav.side .name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cnt { font-size:11px; padding:0 6px; border-radius:999px; background:#e0f2fe; color:#075985; line-height:18px; }
+  .cnt.warn { background:#ffedd5; color:#9a3412; font-weight:600; }
+  .cnt.bad { background:#fee2e2; color:#991b1b; }
+  nav.side .foot { margin:14px 10px 6px; padding-top:10px; border-top:1px solid var(--line); font-size:12px; color:var(--mute); }
+  .main { flex:1; min-width:0; padding:16px 24px; max-width:1500px; }
+  .pagehead { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+  .pagehead h2 { font-size:17px; margin:0; }
+  .pagehead .links a { margin-right:12px; color:var(--accent); font-size:12px; text-decoration:none; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px; }
+  .mon { margin-bottom:18px; padding:10px 14px; }
+  .mon .mhead { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-weight:600; }
+  .mon .mhead .mute { font-weight:400; color:var(--mute); font-size:12px; }
+  .mon .mhead form { margin-left:auto; }
+  .mon table { width:100%; border-collapse:collapse; margin-top:6px; font-size:13px; }
+  .mon th { text-align:left; color:var(--mute); font-weight:500; font-size:12px; padding:4px 8px; border-bottom:1px solid var(--line); }
+  .mon td { padding:6px 8px; border-bottom:1px solid #f1f3f5; vertical-align:top; }
+  .mon tr:last-child td { border-bottom:0; }
+  .mon td a { color:var(--accent); text-decoration:none; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:var(--warn); }
+  .cert-ok { color:var(--ok); } .cert-warn { color:var(--warn); font-weight:600; } .cert-bad { color:var(--bad); font-weight:600; }
   .inbox { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:18px; }
   .inbox textarea { width:100%; min-height:88px; border:1px solid var(--line); border-radius:8px; padding:10px; font:inherit; resize:vertical; }
   .inbox .row { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; align-items:center; }
@@ -22,9 +50,9 @@
   button { border:1px solid var(--line); background:#fff; border-radius:6px; padding:6px 12px; font:inherit; cursor:pointer; }
   button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
   button.danger { color:var(--bad); }
+  button.small { padding:3px 10px; font-size:12px; }
   .cols { display:grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap:16px; }
   .col h2 { font-size:15px; margin:0 0 10px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px; }
   .card.action { border-left:4px solid var(--warn); }
   .card .title { font-weight:600; text-decoration:none; color:var(--ink); }
   .card .title:hover { color:var(--accent); }
@@ -45,6 +73,13 @@
   .last { color:var(--mute); font-size:12px; margin-top:4px; white-space:pre-wrap; }
   .empty { color:var(--mute); font-size:13px; padding:12px; }
   .err { color:var(--bad); font-size:12px; }
+  @media (max-width: 900px) {
+    .layout { display:block; }
+    nav.side { position:static; width:auto; height:auto; border-right:0; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:2px; }
+    nav.side a.head { margin-top:0; }
+    nav.side .foot { width:100%; }
+    .main { padding:12px; }
+  }
 </style>
 </head>
 <body>
@@ -52,12 +87,74 @@
   <h1>🚀 DevFlow AI</h1>
   <span class="mute">AI 后端：{{ ai_backend }} · 门禁：合并{{ '需确认' if cfg.gates.merge else '自动' }} / 发客户{{ '需确认' if cfg.gates.deliver else '自动' }}
     · 剪贴板监听：{{ '开' if cfg.clipboard.enabled else '关' }} · 钉钉机器人：{{ '开' if cfg.dingtalk.enabled else '关' }}</span>
-  <span class="nav"><a href="/">↻ 刷新</a>{% if auth_on %}<a href="/logout" title="退出登录">退出</a>{% endif %}</span>
+  <span class="nav"><a href="{{ back }}">↻ 刷新</a>{% if auth_on %}<a href="/logout" title="退出登录">退出</a>{% endif %}</span>
 </header>
-<div class="wrap">
+
+{% macro counts(it) -%}
+  {% if it.action %}<span class="cnt warn" title="需要你处理">{{ it.action }}</span>{% endif %}
+  {% if it.active %}<span class="cnt" title="自动进行中">{{ it.active }}</span>{% endif %}
+  {% if it.cert_days is not none and it.cert_days <= 30 %}<span class="cnt bad" title="HTTPS 证书 {{ it.cert_days }} 天后到期">🔒{{ it.cert_days }}天</span>{% endif %}
+{%- endmacro %}
+
+<div class="layout">
+<nav class="side">
+  <a class="{{ 'sel' if nav.all.selected else '' }}" href="/"><span class="name">📋 全部</span>{{ counts(nav.all) }}</a>
+  {% for g in nav.groups %}
+    <a class="head {{ 'sel' if g.selected else '' }}" href="/?project={{ g.value|urlencode }}"><span class="name">{{ g.title }}</span>{{ counts(g) }}</a>
+    {% for it in g.entries %}
+      <a class="item {{ 'sel' if it.selected else '' }}" href="/?project={{ it.value|urlencode }}"><span class="name">{{ it.label }}</span>{{ counts(it) }}</a>
+    {% else %}<span class="item empty">（config.yaml 里没有项目）</span>{% endfor %}
+  {% endfor %}
+  {% if nav.unassigned.action or nav.unassigned.active or nav.unassigned.selected %}
+    <a class="head {{ 'sel' if nav.unassigned.selected else '' }}" href="/?project=none"><span class="name">❓ 未归类</span>{{ counts(nav.unassigned) }}</a>
+  {% endif %}
+  <div class="foot">
+    {% if cert_soonest %}🔒 最近到期：{{ cert_soonest.host }}<br>
+      <span class="{{ 'cert-bad' if cert_soonest.cert_days <= 14 else ('cert-warn' if cert_soonest.cert_days <= 30 else 'cert-ok') }}">{{ cert_soonest.cert_expires.strftime('%Y-%m-%d') }}（剩 {{ cert_soonest.cert_days }} 天）</span>
+    {% elif refreshed_at %}🔒 证书：无数据{% else %}🔒 证书：检查中…{% endif %}
+  </div>
+</nav>
+
+<div class="main">
+<div class="pagehead">
+  <h2>{{ title }}</h2>
+  <span class="links">
+  {% for p in detail_projects %}
+    {% if detail_projects|length > 1 %}<span class="b">{{ disp(p.name) }}</span>{% endif %}
+    {% if p.github_repo %}<a href="https://github.com/{{ p.github_repo }}" target="_blank">GitHub</a><a href="https://github.com/{{ p.github_repo }}/pulls" target="_blank">PR</a><a href="https://github.com/{{ p.github_repo }}/issues?q=is%3Aopen+label%3A{{ (p.labels[0] if p.labels else 'devflow')|urlencode }}" target="_blank">Issues</a>{% if p.deploy_workflow %}<a href="https://github.com/{{ p.github_repo }}/actions/workflows/{{ p.deploy_workflow }}" target="_blank">部署记录</a>{% endif %}{% endif %}
+    {% if p.deploy_url %}<a href="{{ p.deploy_url }}" target="_blank">线上 ↗</a>{% endif %}
+  {% endfor %}
+  </span>
+</div>
+
+{% if monitor_rows %}
+<section class="card mon">
+  <div class="mhead">🩺 线上监控
+    <span class="mute">每 {{ monitor_ttl_min }} 分钟自动检查{% if refreshed_at %} · 上次 {{ refreshed_at.strftime('%m-%d %H:%M') }}{% endif %}</span>
+    <form method="post" action="/monitor/refresh"><input type="hidden" name="back" value="{{ back }}"><button class="small" type="submit">立即检查</button></form>
+  </div>
+  <table>
+    <tr><th>项目</th><th>地址</th><th>健康</th><th>HTTPS 证书到期</th><th>签发方</th></tr>
+    {% for row in monitor_rows %}{% set p = row.project %}{% set r = row.result %}
+    <tr>
+      <td>{{ disp(p.name) }}{% if is_own(p.name) %} <span class="b own">自有</span>{% endif %}</td>
+      <td><a href="{{ p.deploy_url }}" target="_blank">{{ p.deploy_url|replace('https://','')|replace('http://','') }}</a></td>
+      <td>{% if r is none %}<span class="mute">检查中…</span>
+          {% elif r.ok %}<span class="ok">✅ {{ r.status }}</span> <span class="mute">{{ r.ms }} ms</span>
+          {% else %}<span class="bad">❌ {{ r.status or r.error }}</span>{% endif %}</td>
+      <td>{% if r is none %}<span class="mute">—</span>
+          {% elif r.cert_expires %}<span class="{{ 'cert-bad' if r.cert_days <= 14 else ('cert-warn' if r.cert_days <= 30 else 'cert-ok') }}">{{ r.cert_expires.strftime('%Y-%m-%d') }}（剩 {{ r.cert_days }} 天）</span>
+          {% else %}<span class="bad" title="{{ r.cert_error }}">❌ {{ r.cert_error[:40] }}</span>{% endif %}</td>
+      <td class="mute">{{ r.cert_issuer if r else '' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</section>
+{% endif %}
 
 <section class="inbox">
   <form method="post" action="/inbox" enctype="multipart/form-data" id="inbox">
+    <input type="hidden" name="back" value="{{ back }}">
     <textarea name="text" id="text" placeholder="在微信 / 钉钉里复制聊天记录或截图，到这个页面 Ctrl+V 就行（文字和图片都可以，多张也行），然后点「交给 AI」。（剪贴板监听开着时，在微信里 Ctrl+C 后不用粘贴也会自动收进来）"></textarea>
     <div class="filebar">
       <span id="preview">📎 截图：在微信里复制图片后，在本页任意位置 Ctrl+V</span>
@@ -68,10 +165,10 @@
       <select name="project">
         <option value="">项目：让 AI 判断</option>
         <optgroup label="客户项目">
-          {% for c in choices if c.kind != 'own' %}<option value="{{ c.value }}">{{ c.label }}</option>{% endfor %}
+          {% for c in choices if c.kind != 'own' %}<option value="{{ c.value }}" {{ 'selected' if c.value == preselect else '' }}>{{ c.label }}</option>{% endfor %}
         </optgroup>
         <optgroup label="自己的项目">
-          {% for c in choices if c.kind == 'own' %}<option value="{{ c.value }}">{{ c.label }}</option>{% endfor %}
+          {% for c in choices if c.kind == 'own' %}<option value="{{ c.value }}" {{ 'selected' if c.value == preselect else '' }}>{{ c.label }}</option>{% endfor %}
         </optgroup>
       </select>
       <input type="text" name="customer" placeholder="客户（可选）">
@@ -110,21 +207,21 @@
   {% if t.error %}<div class="err">{{ t.error[:200] }}</div>{% endif %}
   <div class="actions">
     {% if t.approve_label and t.project %}
-      <form method="post" action="/task/{{ t.id }}/approve"><input type="hidden" name="back" value="/"><button class="primary">{{ t.approve_label }}</button></form>
+      <form method="post" action="/task/{{ t.id }}/approve"><input type="hidden" name="back" value="{{ back }}"><button class="primary">{{ t.approve_label }}</button></form>
     {% elif t.state == 'todo' and not t.project %}
-      <form method="post" action="/task/{{ t.id }}/save_and_approve"><input type="hidden" name="back" value="/">
+      <form method="post" action="/task/{{ t.id }}/save_and_approve"><input type="hidden" name="back" value="{{ back }}">
         <select name="project"><option value="">选择仓库…</option>{% for p in cfg.projects if not t.meta.group or p.group == t.meta.group %}<option value="{{ p.name }}">{{ disp(p.name) }}{{ '（自有）' if p.kind == 'own' else '' }}</option>{% endfor %}</select>
         <button class="primary">创建 Issue</button></form>
     {% endif %}
     {% if t.state in ('failed', 'ci_failed', 'test_failed') %}
-      <form method="post" action="/task/{{ t.id }}/retry"><input type="hidden" name="back" value="/"><button>重试</button></form>
+      <form method="post" action="/task/{{ t.id }}/retry"><input type="hidden" name="back" value="{{ back }}"><button>重试</button></form>
     {% endif %}
     {% if t.state in ('todo', 'issue', 'not_task', 'failed', 'investigated') %}
-      <form method="post" action="/task/{{ t.id }}/retriage"><input type="hidden" name="back" value="/"><button title="让 AI 重新判断类型/项目">重新分析</button></form>
+      <form method="post" action="/task/{{ t.id }}/retriage"><input type="hidden" name="back" value="{{ back }}"><button title="让 AI 重新判断类型/项目">重新分析</button></form>
     {% endif %}
     {% if not t.is_done %}
-      <form method="post" action="/task/{{ t.id }}/resolve" onsubmit="return confirm('标记 #{{ t.id }} 已由你解决？会关闭 DevFlow 开的 PR/分支/Issue')"><input type="hidden" name="back" value="/"><button title="我自己已经解决了">已解决</button></form>
-      <form method="post" action="/task/{{ t.id }}/ignore" onsubmit="return confirm('忽略任务 #{{ t.id }}？')"><input type="hidden" name="back" value="/"><button class="danger">忽略</button></form>
+      <form method="post" action="/task/{{ t.id }}/resolve" onsubmit="return confirm('标记 #{{ t.id }} 已由你解决？会关闭 DevFlow 开的 PR/分支/Issue')"><input type="hidden" name="back" value="{{ back }}"><button title="我自己已经解决了">已解决</button></form>
+      <form method="post" action="/task/{{ t.id }}/ignore" onsubmit="return confirm('忽略任务 #{{ t.id }}？')"><input type="hidden" name="back" value="{{ back }}"><button class="danger">忽略</button></form>
     {% endif %}
   </div>
 </div>
@@ -144,6 +241,7 @@
     {% for t in done %}{{ card(t) }}{% else %}<div class="empty">空</div>{% endfor %}
   </section>
 </main>
+</div>
 </div>
 <script>
   // 在页面任意位置 Ctrl+V：图片进附件，文字进输入框
