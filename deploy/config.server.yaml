@@ -7,8 +7,12 @@ ai:
   backend: auto            # .env 里有 ANTHROPIC_API_KEY 走 API，否则用容器里登录过的 Claude Code
 
 gates:
-  merge: true
+  merge: false             # CI 通过自动合并；没有 PR 检查的仓库仍等你本地 build 后确认
   deliver: true
+
+pipeline:
+  merge_requires_ci: true
+  sync_seconds: 300        # 每 5 分钟和 GitHub 对账（本地 Closes #N / 网页合并 PR）
 
 dingtalk:
   enabled: false           # 要接钉钉机器人：填 client_id/client_secret 后改为 true

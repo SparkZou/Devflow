@@ -20,6 +20,8 @@
   header .mute { color:var(--mute); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   header .nav { margin-left:auto; display:flex; gap:14px; white-space:nowrap; }
   header a { color:var(--accent); text-decoration:none; }
+  header form { display:inline; }
+  button.link { border:0; background:none; color:var(--accent); padding:0; font:inherit; cursor:pointer; -webkit-appearance:none; appearance:none; }
   .layout { display:flex; align-items:flex-start; }
   nav.side { width:250px; flex:none; background:#fff; border-right:1px solid var(--line); position:sticky; top:49px; height:calc(100vh - 49px); overflow:auto; padding:10px 8px; }
   nav.side a { display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:6px; color:var(--ink); text-decoration:none; font-size:13px; }
@@ -133,7 +135,7 @@
   <h1>🚀 DevFlow AI</h1>
   <span class="mute">AI 后端：{{ ai_backend }} · 门禁：合并{{ '需确认' if cfg.gates.merge else '自动' }} / 发客户{{ '需确认' if cfg.gates.deliver else '自动' }}
     · 剪贴板监听：{{ '开' if cfg.clipboard.enabled else '关' }} · 钉钉机器人：{{ '开' if cfg.dingtalk.enabled else '关' }}</span>
-  <span class="nav"><a href="{{ back }}">↻ 刷新</a>{% if auth_on %}<a href="/logout" title="退出登录">退出</a>{% endif %}</span>
+  <span class="nav"><form method="post" action="/sync"><input type="hidden" name="back" value="{{ back }}"><button class="link" type="submit" title="本地关了 Issue / 网页上合并了 PR 后，让面板立刻跟上（平时每 5 分钟自动对账）">🔁 同步 GitHub</button></form><a href="{{ back }}">↻ 刷新</a>{% if auth_on %}<a href="/logout" title="退出登录">退出</a>{% endif %}</span>
 </header>
 
 {% macro counts(it) -%}

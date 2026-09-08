@@ -162,6 +162,11 @@ def create_app(cfg: Config, store: Store, pipeline: Pipeline, monitor: SiteMonit
             monitor_ttl_min=max(1, monitor.ttl // 60), cert_soonest=soonest,
             preselect=sel if sel in {c["value"] for c in choices} else ""))
 
+    @app.post("/sync")
+    def sync_now(back: str = Form("/")):
+        pipeline.sync_github()
+        return RedirectResponse(_safe_back(back), status_code=303)
+
     @app.post("/monitor/refresh")
     def monitor_refresh(back: str = Form("/")):
         try:
@@ -265,6 +270,10 @@ def create_app(cfg: Config, store: Store, pipeline: Pipeline, monitor: SiteMonit
         if not task:
             raise HTTPException(404)
         return task.model_dump()
+
+    @app.post("/api/sync")
+    def api_sync():
+        return {"ok": True, "changed": pipeline.sync_github()}
 
     @app.post("/api/inbox")
     def api_inbox(body: InboxIn):

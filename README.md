@@ -259,9 +259,20 @@ vi conf/config.yaml                             # projects 照本机的写，rep
 
 自动部署用的是仓库 Variables `DEPLOY_HOST` / `DEPLOY_USER` 和 Secret `DEPLOY_SSH_KEY`（已配置为 `~/.ssh/devflow_ci`）。
 
+## 和你自己动手改并存（别两边都做）
+
+DevFlow 建了 Issue 的需求，要么让它的 PR 跑完 CI 合并，要么你自己改——动手前 `devflow list`（或看面板）查一眼有没有它正在做的。两边都能收口：
+
+- **你本地直接改了 main**：commit 里写 `Closes #N`，推上去 GitHub 会关掉 Issue。DevFlow 每 5 分钟（`pipeline.sync_seconds`）和 GitHub 对账：
+  发现 Issue 已关 → 关掉它自己开的 PR、删分支，任务标「已解决」。面板右上角「🔁 同步 GitHub」或 `devflow sync` 可以立刻对账。
+- **你在网页上合并了它的 PR** → 任务自动进入「部署中」，后面的健康检查、AI 验证、客户回复照常。
+- **自动合并**：`gates.merge: false`（或某个项目 `auto_merge: true`）时，PR 的 CI 通过就自动合并，合并后仓库自己的 Actions 部署，DevFlow 接着验证。
+  沙箱里不能 build，所以 `pipeline.merge_requires_ci: true` 要求 PR 上必须有通过的检查：仓库没配 PR 检查的，任务会停在「待合并」并提醒你本地 build 后再点合并。
+  想让一个仓库全自动，给它加一个在 `pull_request` 上跑 build/test 的工作流即可。
+
 ## 门禁与安全
 
-- `gates.merge` / `gates.deliver` 默认开着：**代码进主干**和**给客户发消息**这两件事出错代价最大，建议保留。
+- `gates.deliver` 默认开着：**给客户发消息**出错代价最大，建议保留；`gates.merge` 见上一节（CI 通过自动合并，没 CI 的等你）。
 - Claude Code 在 `data/worktrees/task-N` 里工作，用完即删，**不会碰你正在改的工作目录**。
 - 默认 `coder.allowed_tools` 只允许读写文件和 `git/python/pytest/npm` 类命令；想完全放开设 `coder.skip_permissions: true`（风险自负）。
 - 所有状态存在 `data/devflow.sqlite3`，日志在 `data/devflow.log`，截图在 `data/screenshots/`。

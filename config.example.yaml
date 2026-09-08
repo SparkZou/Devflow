@@ -25,7 +25,8 @@ coder:                     # 自动写代码：在项目仓库里以无人值守
 gates:                     # 哪一步需要你点一下"确认"。false = 全自动
   triage: false            # AI 判定是需求后 -> 直接创建任务和 GitHub Issue
   code: false              # 建完 Issue -> 直接开分支让 Claude 写代码并提 PR
-  merge: true              # PR 通过 CI 后，合并前需要你确认（建议保留）
+  merge: false             # false = PR 的 CI 通过后自动合并（仓库没有 PR 检查的仍会等你本地 build 后确认，见 pipeline.merge_requires_ci）
+                           # true = 每个 PR 都等你点「合并」。也可以在单个项目上用 auto_merge 覆盖
   deliver: true            # 给客户发消息前需要你确认（建议保留）
 
 pipeline:
@@ -33,6 +34,8 @@ pipeline:
   ci_timeout_minutes: 45
   deploy_timeout_minutes: 30
   ci_fix_attempts: 1       # CI 失败后自动让 Claude 修几次
+  merge_requires_ci: true  # 自动合并的前提是 PR 上有通过的检查；仓库没配 PR 检查（沙箱里不能 build）就等你本地 build 后再点合并
+  sync_seconds: 300        # 每隔多久和 GitHub 对账：你本地 commit 写了 Closes #N、或在网页上合并/关闭了 PR，任务状态自动跟上
 
 dingtalk:
   enabled: false
@@ -85,3 +88,4 @@ projects:
     keywords: ["订单", "后台", "demo"]              # 需求里出现这些词 -> 归到这个项目
     test_hints: "首页应显示订单列表；无需登录"        # 给 AI 测试的提示（测试账号、入口页面等）
     labels: ["devflow"]                              # 自动创建的 Issue 打的标签（不存在会自动忽略）
+    # auto_merge: true                               # 覆盖 gates.merge：true = 这个仓库 CI 通过就自动合并；false = 总是等确认

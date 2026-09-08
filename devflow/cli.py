@@ -347,6 +347,20 @@ def resolve(task_id: int, note: str = typer.Option("", help="一句说明，会�
 
 
 @app.command()
+def sync(config: Optional[str] = ConfigOpt) -> None:
+    """和 GitHub 对账：本地已解决（Issue 关了）/ 网页上合并了 PR 的任务，状态立刻跟上。"""
+    _utf8_console()
+    cfg = _load(config)
+    api = _api(cfg)
+    if api:
+        changed = api.post("/api/sync").json().get("changed", [])
+    else:
+        _setup_logging(cfg)
+        changed = _local_pipeline(cfg).sync_github()
+    typer.echo("\n".join(changed) if changed else "没有需要同步的任务")
+
+
+@app.command()
 def send(task_id: int, config: Optional[str] = ConfigOpt) -> None:
     """把回复发给客户（钉钉直接发；微信复制到剪贴板）。"""
     _utf8_console()

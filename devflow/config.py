@@ -55,6 +55,8 @@ class GatesCfg(BaseModel):
 
 class PipelineCfg(BaseModel):
     poll_seconds: int = 60
+    sync_seconds: int = 300  # 多久和 GitHub 对一次账（Issue 被本地关掉 / PR 在网页上合并）
+    merge_requires_ci: bool = True  # 自动合并只在 PR 有通过的检查时进行；仓库没配 PR 检查（沙箱不能 build）→ 等你本地 build 后确认
     ci_timeout_minutes: int = 45
     deploy_timeout_minutes: int = 30
     ci_fix_attempts: int = 1
@@ -119,6 +121,7 @@ class ProjectCfg(BaseModel):
     keywords: list[str] = Field(default_factory=list)
     test_hints: str = ""
     labels: list[str] = Field(default_factory=lambda: ["devflow"])
+    auto_merge: Optional[bool] = None  # None = 跟随 gates.merge；true = 这个仓库 CI 通过就自动合并；false = 总是等你确认
 
     @property
     def health_url(self) -> str:

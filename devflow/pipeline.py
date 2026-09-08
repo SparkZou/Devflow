@@ -59,6 +59,7 @@ class Pipeline:
         self._fast_q: "queue.Queue[tuple[str, int]]" = queue.Queue()
         self._coder_q: "queue.Queue[tuple[str, int]]" = queue.Queue()
         self._stop = threading.Event()
+        self._last_sync = 0.0
 
     CODER_ACTIONS = {"code", "fix_ci", "investigate"}
 
@@ -494,6 +495,50 @@ class Pipeline:
                 self._check_deploy(task)
             except Exception as e:  # noqa: BLE001
                 log.warning("检查部署 #%s 失败: %s", task.id, e)
+        if time.monotonic() - self._last_sync >= self.cfg.pipeline.sync_seconds:
+            self._last_sync = time.monotonic()
+            self.sync_github()
+
+    # 这些状态下 Issue 若在 GitHub 上被关掉（你本地直接改了 main，commit 写 Closes #N），说明你已经自己解决了
+    ISSUE_SYNC_STATES = {"issue", "coding", "pr_open", "ci_failed", "ready_to_merge", "failed"}
+
+    def sync_github(self) -> list[str]:
+        """和 GitHub 对账，不留孤儿 Issue/PR：网页上合并了 PR → 进入部署；Issue 被关 → 关掉 DevFlow 的 PR/分支，标记已解决。"""
+        changed: list[str] = []
+        for task in self.store.list(limit=500):
+            if task.is_done or not task.project:
+                continue
+            proj = self.cfg.project(task.project)
+            if not proj:
+                continue
+            try:
+                if task.pr_number and task.state in ("ready_to_merge", "ci_failed", "failed"):
+                    st = github.pr_status(proj.github_repo, task.pr_number)
+                    if st["merged"]:
+                        task.merge_sha, task.merged_at = st["merge_sha"], now_iso()
+                        task.set_state("deploying", "🔁 PR 已在 GitHub 上合并，等待部署")
+                        self.store.save(task)
+                        changed.append(f"#{task.id} PR #{task.pr_number} 已在 GitHub 合并 → 部署中")
+                        continue
+                    if st["state"] == "CLOSED" and task.state != "failed":
+                        task.set_state("failed", "🔁 PR 在 GitHub 上被关闭（未合并）")
+                        self.store.save(task)
+                        changed.append(f"#{task.id} PR #{task.pr_number} 被关闭")
+                        continue
+                if task.issue_number and task.state in self.ISSUE_SYNC_STATES:
+                    if github.issue_state(proj.github_repo, task.issue_number)["state"] == "CLOSED":
+                        done = self.resolve(task.id, note="Issue 已在 GitHub 上关闭", issue_closed=True)
+                        changed.append(f"#{task.id} Issue #{task.issue_number} 已关闭 → 标记已解决"
+                                       + (f"（{'、'.join(done)}）" if done else ""))
+            except Exception as e:  # noqa: BLE001
+                log.warning("同步 #%s 失败: %s", task.id, e)
+        if changed:
+            log.info("GitHub 同步：%s", "；".join(changed))
+            self.notifier.me("🔁 已和 GitHub 同步", "\n".join(f"- {c}" for c in changed), desktop=False)
+        return changed
+
+    def _auto_merge(self, proj: ProjectCfg) -> bool:
+        return proj.auto_merge if proj.auto_merge is not None else not self.cfg.gates.merge
 
     def _check_ci(self, task: Task) -> None:
         proj = self.cfg.project(task.project)
@@ -510,12 +555,19 @@ class Pipeline:
             self.store.save(task)
             return
         if st["checks"] in ("success", "none"):
-            task.set_state("ready_to_merge", "CI 通过" if st["checks"] == "success" else "仓库没有配置 CI 检查")
+            if st["checks"] == "none" and self.cfg.pipeline.merge_requires_ci:
+                task.set_state("ready_to_merge", "仓库没有 PR 检查（沙箱不能 build）：请本地 build 通过后再点合并")
+                self.store.save(task)
+                self.notifier.me(f"⏸ #{task.id} PR 已开，但仓库没有 CI，等你本地 build 后确认合并", f"{task.title}\n{task.pr_url}")
+                return
+            auto = self._auto_merge(proj)
+            task.set_state("ready_to_merge", ("CI 通过" if st["checks"] == "success" else "仓库没有配置 CI 检查")
+                           + ("，自动合并" if auto else ""))
             self.store.save(task)
-            if self.cfg.gates.merge:
-                self.notifier.me(f"✅ #{task.id} CI 通过，等你确认合并", f"{task.title}\n{task.pr_url}")
-            else:
+            if auto:
                 self.enqueue("merge", task.id)
+            else:
+                self.notifier.me(f"✅ #{task.id} CI 通过，等你确认合并", f"{task.title}\n{task.pr_url}")
         elif st["checks"] == "failure":
             names = ", ".join(st["failed"])
             if task.ci_fix_attempts < self.cfg.pipeline.ci_fix_attempts:
@@ -638,7 +690,7 @@ class Pipeline:
         if proj and task.issue_number:
             github.close_issue(proj.github_repo, task.issue_number, "已忽略（DevFlow）")
 
-    def resolve(self, task_id: int, note: str = "") -> list[str]:
+    def resolve(self, task_id: int, note: str = "", issue_closed: bool = False) -> list[str]:
         """你自己把问题解决了：关掉 DevFlow 开的 PR/分支/Issue，任务标记为已交付。返回做了什么。"""
         task = self._get(task_id)
         proj = self.cfg.project(task.project)
@@ -656,11 +708,12 @@ class Pipeline:
             if github.delete_remote_branch(proj.repo_path, task.branch):
                 done.append(f"删除分支 {task.branch}")
             github.delete_local_branch(proj.repo_path, task.branch)
-        if proj and task.issue_number:
+        if proj and task.issue_number and not issue_closed:
             github.close_issue(proj.github_repo, task.issue_number, comment)
             done.append(f"关闭 Issue #{task.issue_number}")
         task.delivered_at = now_iso()
-        task.set_state("delivered", "👤 手动标记已解决" + (f"：{note}" if note else "") + ("；" + "、".join(done) if done else ""))
+        task.set_state("delivered", ("🔁 自动标记已解决" if issue_closed else "👤 手动标记已解决")
+                       + (f"：{note}" if note else "") + ("；" + "、".join(done) if done else ""))
         self.store.save(task)
         return done
 

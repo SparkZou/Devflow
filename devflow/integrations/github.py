@@ -82,6 +82,12 @@ def comment_issue(repo: str, number: int, body: str) -> None:
         Path(body_file).unlink(missing_ok=True)
 
 
+def issue_state(repo: str, number: int) -> dict:
+    """OPEN / CLOSED（本地 commit 写了 Closes #N 推上去后 GitHub 会自动关）。"""
+    data = gh_json(["issue", "view", str(number), "-R", repo, "--json", "state,closedAt,stateReason"]) or {}
+    return {"state": data.get("state", ""), "closed_at": data.get("closedAt") or "", "reason": data.get("stateReason") or ""}
+
+
 def close_issue(repo: str, number: int, comment: str = "") -> None:
     args = ["issue", "close", str(number), "-R", repo]
     if comment:
