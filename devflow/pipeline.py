@@ -555,6 +555,11 @@ class Pipeline:
             self.store.save(task)
             return
         if st["checks"] in ("success", "none"):
+            if task.pr_opened_at and _minutes_since(task.pr_opened_at) < self.cfg.pipeline.ci_register_minutes:
+                # 刚开 PR / 刚推送修复：GitHub 可能还没登记这次提交的全部检查——Actions 常比
+                # GitGuardian 这类几秒就回的检查晚出现。这时按"通过"下结论会在 CI 开跑前就合并；
+                # 按"没 CI"下结论，任务离开 pr_open 后就再也不会回来看 CI 结果。
+                return
             if st["checks"] == "none" and self.cfg.pipeline.merge_requires_ci:
                 task.set_state("ready_to_merge", "仓库没有 PR 检查（沙箱不能 build）：请本地 build 通过后再点合并")
                 self.store.save(task)

@@ -57,6 +57,7 @@ class PipelineCfg(BaseModel):
     poll_seconds: int = 60
     sync_seconds: int = 300  # 多久和 GitHub 对一次账（Issue 被本地关掉 / PR 在网页上合并）
     merge_requires_ci: bool = True  # 自动合并只在 PR 有通过的检查时进行；仓库没配 PR 检查（沙箱不能 build）→ 等你本地 build 后确认
+    ci_register_minutes: int = 3  # 刚开 PR / 刚推送后 GitHub 可能还没登记全部检查，这段时间里不按"通过/没有检查"下结论
     ci_timeout_minutes: int = 45
     deploy_timeout_minutes: int = 30
     ci_fix_attempts: int = 1

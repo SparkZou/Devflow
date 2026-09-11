@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import base64
+import datetime as dt
 
 from fastapi.testclient import TestClient
 
 from devflow.config import GatesCfg
-from devflow.models import Task
+from devflow.models import Task, now_iso
 from devflow.server import create_app
 from test_smoke import make
 
@@ -52,6 +53,38 @@ def test_auto_merge_waits_when_repo_has_no_ci(tmp_path, monkeypatch):
     monkeypatch.setattr("devflow.pipeline.github.pr_status", lambda repo, n: pr(checks="none"))
     p._check_ci(store.get(t2.id))
     assert merged == [9, 9] and store.get(t2.id).state == "deploying"
+
+
+def test_fresh_pr_waits_for_github_to_list_its_checks(tmp_path, monkeypatch):
+    # GitGuardian 在推送后几秒就回"通过"，Actions 的检查要晚一点才出现。在这个空档里下结论，
+    # 要么 CI 还没跑就合并了，要么把仓库记成"没 CI"、从此不再看 CI 结果。
+    merged = []
+    monkeypatch.setattr("devflow.pipeline.github.merge_pr", lambda repo, n: merged.append(n) or "abc1234")
+    cfg, store, p = make(tmp_path, gates=GatesCfg(merge=False))
+    t = open_pr_task(store, pr_opened_at=now_iso())
+
+    for early in ("success", "none"):
+        monkeypatch.setattr("devflow.pipeline.github.pr_status", lambda repo, n, c=early: pr(checks=c))
+        p._check_ci(store.get(t.id))
+        assert store.get(t.id).state == "pr_open" and not merged and not p.notifier.sent
+
+    # 等待期过后照常：检查全绿 → 自动合并
+    t = store.get(t.id)
+    t.pr_opened_at = (dt.datetime.now() - dt.timedelta(minutes=cfg.pipeline.ci_register_minutes + 1)) \
+        .replace(microsecond=0).isoformat(sep=" ")
+    store.save(t)
+    monkeypatch.setattr("devflow.pipeline.github.pr_status", lambda repo, n: pr(checks="success"))
+    p._check_ci(store.get(t.id))
+    assert merged == [9] and store.get(t.id).state == "deploying"
+
+    # 失败不用等：马上排队修
+    queued = []
+    monkeypatch.setattr(p, "enqueue", lambda action, task_id: queued.append(action))
+    t2 = open_pr_task(store, pr_opened_at=now_iso())
+    monkeypatch.setattr("devflow.pipeline.github.pr_status",
+                        lambda repo, n: pr(checks="failure", failed=["Backend tests"]))
+    p._check_ci(store.get(t2.id))
+    assert queued == ["fix_ci"]
 
 
 def test_project_auto_merge_overrides_gate(tmp_path, monkeypatch):
