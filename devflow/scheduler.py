@@ -27,9 +27,13 @@ def build_digest(store: Store, cfg: Config, monitor=None) -> tuple[str, str]:
             s += f"（{t.project}）"
         if t.deadline:
             s += f" ⏰{t.deadline}" + ("【逾期】" if t.overdue else "")
+        if t.id in action_ids and t.waiting_hours >= 24:
+            s += f" ⏳已等 {t.waiting_label}"
         return s
 
-    lines = [f"未完成 {len(tasks)} 个 · 等你处理 {len(action)} 个 · 逾期 {len(overdue)} 个", ""]
+    stuck = [t for t in action if t.waiting_hours >= 24]
+    lines = [f"未完成 {len(tasks)} 个 · 等你处理 {len(action)} 个 · 逾期 {len(overdue)} 个"
+             + (f" · ⚠️ 卡了超过 1 天 {len(stuck)} 个" if stuck else ""), ""]
     if action:
         lines.append("**等你处理：**")
         lines += [line(t) for t in sorted(action, key=lambda t: (order.get(t.priority, 9), t.deadline or "9"))]

@@ -119,6 +119,20 @@ class Task(BaseModel):
         return STATE_LABELS.get(self.state, self.state)
 
     @property
+    def waiting_hours(self) -> float:
+        """停在当前这一步多久了：按最后一条事件的时间算（updated_at 每次保存都会刷新，不可靠）。"""
+        since = self.events[-1].at if self.events else self.updated_at
+        try:
+            return max(0.0, (dt.datetime.now() - dt.datetime.fromisoformat(since)).total_seconds() / 3600)
+        except ValueError:
+            return 0.0
+
+    @property
+    def waiting_label(self) -> str:
+        h = self.waiting_hours
+        return f"{int(h // 24)} 天" if h >= 24 else f"{int(h)} 小时"
+
+    @property
     def is_done(self) -> bool:
         return self.state in DONE_STATES
 

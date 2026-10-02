@@ -233,6 +233,8 @@ TRIAGE_SYSTEM = """你是一个软件外包团队的需求分诊助手。开发�
 - 开发任务（新功能、修改、Bug 修复、配置/数据变更、部署请求等）→ is_requirement=true，task_type=implement
 - 检查/确认/回答类（"这个问题是否已经解决了""帮我检查下""给出结论""为什么会这样""现在是什么状态"）→ is_requirement=true，task_type=investigate。
   这类不改代码，由开发者去查代码、提交记录和线上环境后回复结论。客户没明确要求修改时优先判为 investigate。
+- 取东西/查找类（"帮我取个图片/文件""把 XX 发我""XX 在哪""给我个链接""导出一份"）同样是 investigate：
+  不需要改代码，找到后回复位置或链接即可。只有确实要新增/修改代码、配置或数据时才是 implement。
 闲聊、寒暄、纯粹的确认/感谢、通知已完成的事、报价/合同/付款等非开发内容 → is_requirement=false。
 
 如果是需求（两种 task_type 都要填下面这些字段；investigate 的 acceptance_criteria 写"需要确认的点"）：

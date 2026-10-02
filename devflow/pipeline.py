@@ -303,6 +303,7 @@ class Pipeline:
             task.report = res.result[-6000:]
             task.coder_cost += res.cost_usd
             task.set_state("investigated", f"检查完成（{res.num_turns} 轮，${res.cost_usd:.2f}）")
+            self._close_issue_with_report(task, proj)
         finally:
             github.remove_worktree(proj.repo_path, wt)
             github.delete_local_branch(proj.repo_path, branch)
@@ -346,27 +347,58 @@ class Pipeline:
         self.store.save(task)
         wt = self._worktree(task)
         github.prepare_worktree(proj.repo_path, proj.default_branch, task.branch, wt)
+        no_code, summary = False, ""
         try:
             res = self._run_coder(wt, self._coder_prompt(task, proj))
             task.coder_summary = res.result[-4000:]
             task.coder_cost += res.cost_usd
             task.log(f"Claude Code 完成：{res.num_turns} 轮，${res.cost_usd:.2f}")
+            self.store.save(task)  # 先落库：后面任何一步失败，Claude 的总结也不会丢
             if github.has_changes(wt):
                 task.head_sha = github.commit_and_push(
                     wt, task.branch, f"{task.title} (#{task.issue_number})\n\nDevFlow task #{task.id}")
             elif github.commit_log(wt, proj.default_branch):
                 task.head_sha = github.push_branch(wt, task.branch)  # Claude 自己 commit 了
             else:
-                raise RuntimeError("Claude 没有产生任何代码改动，请查看 coder_summary")
-            num, url = github.create_pr(proj.github_repo, proj.default_branch, task.branch,
-                                        f"[{task.priority}] {task.title}", self._pr_body(task))
-            task.pr_number, task.pr_url = num, url
-            task.pr_opened_at = now_iso()
-            task.set_state("pr_open", f"已提 PR #{num}: {url}")
+                no_code, summary = True, res.result
+            if not no_code:
+                num, url = github.create_pr(proj.github_repo, proj.default_branch, task.branch,
+                                            f"[{task.priority}] {task.title}", self._pr_body(task))
+                task.pr_number, task.pr_url = num, url
+                task.pr_opened_at = now_iso()
+                task.set_state("pr_open", f"已提 PR #{num}: {url}")
         finally:
             github.remove_worktree(proj.repo_path, wt)
+        if no_code:
+            self._no_code_needed(task, proj, summary)
+            return
         self.store.save(task)
         self.notifier.me(f"🔀 PR 已开 #{task.id}", f"{task.title}\n{task.pr_url}\n等待 CI…", desktop=False)
+
+    def _no_code_needed(self, task: Task, proj: ProjectCfg, summary: str) -> None:
+        """写代码这一步一行没改 = 这不是改代码的需求（取文件 / 问问题 / 其实已经做过了）。
+        不让它卡在「出错」留下孤儿 Issue：转成检查类，给出结论、生成回复，Issue 用结论收口。"""
+        task.task_type = "investigate"
+        github.delete_local_branch(proj.repo_path, task.branch)
+        task.branch = ""
+        if len(summary.strip()) >= 40:
+            task.report = summary[-6000:]
+            task.set_state("investigated", "没有需要改的代码 → 转为检查类，用 Claude 的结论回复")
+            self._close_issue_with_report(task, proj)
+            self.store.save(task)
+            self.enqueue("draft_delivery", task.id)
+        else:
+            task.set_state("investigating", "没有需要改的代码，也没给出结论 → 转为检查类，重新只读检查")
+            self.store.save(task)
+            self.enqueue("investigate", task.id)
+
+    def _close_issue_with_report(self, task: Task, proj: ProjectCfg) -> None:
+        """检查类任务不改代码：如果之前已经建了 Issue，用结论把它关掉，不留孤儿。"""
+        if not task.issue_number:
+            return
+        github.close_issue(proj.github_repo, task.issue_number,
+                           f"这条不需要改代码，结论如下（DevFlow 任务 #{task.id}）：\n\n{task.report[:3000]}")
+        task.log(f"Issue #{task.issue_number} 已用结论关闭")
 
     def step_fix_ci(self, task: Task) -> None:
         proj = self._project(task)
@@ -893,6 +925,9 @@ AI 整理：{task.title}
 2. 必要时运行现有测试或写临时脚本验证（结束前删掉，不要留下改动）。
 3. 线上地址：{proj.deploy_url or '（未配置）'}。可以用 WebFetch 看线上页面/接口是否已生效；访问不了就说明。
 4. 不要修改仓库文件，不要 git commit / push。
+5. 如果客户要的是某个文件 / 图片 / 文档：在仓库里找（git ls-files、git log --name-only、find），
+   给出仓库内路径和手机上能直接点开的链接 https://github.com/{proj.github_repo}/blob/{proj.default_branch}/<路径>。
+   仓库里没有（被 .gitignore 忽略、只在开发者电脑或线上服务器上生成）就明确说：它是怎么生成的、应该在哪个目录、为什么这里取不到。
 
 ## 输出（中文，写给开发者本人看，会由他转述给客户）
 - **结论**：已解决 / 未解决 / 部分解决 / 无法确定 —— 一句话

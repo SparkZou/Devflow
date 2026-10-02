@@ -239,6 +239,7 @@
   <div class="badges">
     <span class="b {{ t.priority }}">{{ t.priority }}</span>
     <span class="b state">{{ t.label }}</span>
+    {% if is_action and t.waiting_hours >= 6 %}<span class="b overdue" title="停在这一步等你处理的时间">⏳ 已等 {{ t.waiting_label }}</span>{% endif %}
     {% if t.is_investigation %}<span class="b inv">🔍 检查</span>{% endif %}
     {% if t.project %}<span class="b">📁 {{ disp(t.project) }}</span>{% if is_own(t.project) %}<span class="b own">自有</span>{% endif %}{% elif t.meta.group %}<span class="b overdue">{{ t.meta.group }}：待选仓库</span>{% else %}<span class="b overdue">未选项目</span>{% endif %}
     {% if t.customer %}<span class="b">👤 {{ t.customer }}</span>{% endif %}
